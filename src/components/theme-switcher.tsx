@@ -33,7 +33,7 @@ export function ThemeSwitcher({ current }: { current: ThemeId }) {
       <p className="text-muted-foreground mb-2 text-[0.6875rem] tracking-wide uppercase">
         Direction visuelle
       </p>
-      <div className="flex gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {THEMES.map((theme) => (
           <button
             key={theme.id}
@@ -41,7 +41,7 @@ export function ThemeSwitcher({ current }: { current: ThemeId }) {
             onClick={() => setSelected(theme.id)}
             aria-pressed={selected === theme.id}
             className={cn(
-              "flex-1 rounded-[var(--radius)] border px-3 py-2 text-sm transition-colors",
+              "rounded-[var(--radius)] border px-2 py-2 text-sm transition-colors",
               "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
               selected === theme.id
                 ? "border-primary bg-primary text-primary-foreground"

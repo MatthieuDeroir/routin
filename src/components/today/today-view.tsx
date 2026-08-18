@@ -183,7 +183,13 @@ export function TodayView({
             {relative ? (
               <p className="text-muted-foreground text-xs">{relative}</p>
             ) : null}
-            <h1 className="rt-display truncate text-[1.75rem] leading-tight first-letter:uppercase">
+            <h1
+              className="rt-display truncate leading-tight first-letter:uppercase"
+              style={{
+                fontSize: "var(--rt-title-size, 1.75rem)",
+                textTransform: "var(--rt-title-transform, none)" as never,
+              }}
+            >
               {label}
             </h1>
           </div>

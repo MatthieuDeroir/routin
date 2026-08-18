@@ -7,12 +7,27 @@ export const THEMES = [
   {
     id: "lumiere",
     name: "Lumière",
-    idea: "Le fond prend la couleur du moment en cours, de l’aube à la nuit. Les sections sont des strates de verre dépoli.",
+    idea: "Le fond prend la couleur du ciel à l’heure qu’il est, de l’aube à la nuit. Les sections sont des strates de verre dépoli.",
   },
   {
     id: "carnet",
     name: "Carnet",
     idea: "Un carnet de suivi sur papier quadrillé : grille de points, coche tracée à l’encre, crayon rouge pour le jour même.",
+  },
+  {
+    id: "sequenceur",
+    name: "Séquenceur",
+    idea: "La grammaire d’un séquenceur de musique : chaque moment est une piste, chaque tâche un pas, et un pas validé s’allume. Sombre, monospacé, calé sur une grille serrée.",
+  },
+  {
+    id: "riso",
+    name: "Riso",
+    idea: "Deux encres sur du papier : outremer et orange fluo, trame de points visible, capitales condensées, ombres portées franches. L’énergie d’un objet imprimé.",
+  },
+  {
+    id: "brume",
+    name: "Brume",
+    idea: "Le pôle opposé : ni carte, ni bordure, presque pas de couleur. Le contraste passe par l’échelle typographique et le blanc.",
   },
 ] as const;
 
