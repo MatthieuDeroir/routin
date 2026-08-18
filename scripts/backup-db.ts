@@ -17,6 +17,29 @@ function stamp() {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
+/**
+ * Retrouve le nom Turso d'une base à partir de son URL.
+ *
+ * L'hôte vaut `<base>-<organisation>.<région>.turso.io` : découper au premier
+ * tiret donne un nom faux dès que le nom de base en contient un. On interroge
+ * donc la CLI, qui fait autorité, plutôt que de deviner.
+ */
+function resolveTursoName(url: string): string {
+  const host = url.replace(/^\w+:\/\//, "").split("/")[0];
+  const listing = execFileSync("turso", ["db", "list"], { encoding: "utf8" });
+
+  for (const line of listing.split("\n").slice(1)) {
+    const columns = line.trim().split(/\s{2,}/);
+    const name = columns[0];
+    const dbUrl = columns.find((column) => column.includes("turso.io"));
+    if (name && dbUrl?.includes(host)) return name;
+  }
+
+  throw new Error(
+    `Aucune base Turso ne correspond à ${host}. Vérifiez \`turso db list\`.`,
+  );
+}
+
 function main() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL manquant : impossible de sauvegarder.");
@@ -36,7 +59,7 @@ function main() {
   }
 
   if (url.startsWith("libsql://") || url.startsWith("https://")) {
-    const name = url.replace(/^.*:\/\//, "").split(".")[0];
+    const name = resolveTursoName(url);
     const target = path.join(BACKUP_DIR, `${name}-${stamp()}.sql`);
     try {
       const dump = execFileSync("turso", ["db", "shell", name, ".dump"], {

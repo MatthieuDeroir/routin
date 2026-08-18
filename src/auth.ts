@@ -24,7 +24,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "database" },
   secret: env.AUTH_SECRET,
   trustHost: true,
-  providers: isGoogleAuthConfigured
+  providers: isGoogleAuthConfigured()
     ? [
         Google({
           clientId: env.AUTH_GOOGLE_ID,

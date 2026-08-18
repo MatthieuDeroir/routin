@@ -18,7 +18,7 @@ export default async function LoginPage() {
         </p>
       </div>
 
-      {isGoogleAuthConfigured ? (
+      {isGoogleAuthConfigured() ? (
         <form
           action={async () => {
             "use server";
