@@ -1,16 +1,17 @@
 import { type VercelConfig } from "@vercel/config/v1";
 
 /**
- * Rappels programmés.
+ * Configuration du projet.
  *
- * La cadence doit correspondre à `WINDOW_MINUTES` dans
- * `src/app/api/cron/reminders/route.ts` : la fenêtre de rattrapage sert
- * précisément à ne rien manquer entre deux passages. La route est idempotente
- * (une seule notification par tâche et par jour), donc l'appeler plus souvent
- * est sans risque — un déclencheur externe porteur de CRON_SECRET fonctionne
- * aussi bien, si la cadence des crons du plan ne suffit pas.
+ * Pas de `crons` ici : le plan Hobby limite les tâches planifiées à **une par
+ * jour**, ce qui ne permet pas de rappeler une tâche à son heure. Le
+ * déclencheur vit donc dans `.github/workflows/reminders.yml`, qui appelle
+ * `/api/cron/reminders` toutes les quinze minutes avec CRON_SECRET.
+ *
+ * En passant au plan Pro, il suffit de rétablir ici :
+ *   crons: [{ path: "/api/cron/reminders", schedule: "*\/15 * * * *" }]
+ * et de désactiver le workflow.
  */
 export const config: VercelConfig = {
   framework: "nextjs",
-  crons: [{ path: "/api/cron/reminders", schedule: "*/15 * * * *" }],
 };

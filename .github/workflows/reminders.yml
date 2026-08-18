@@ -1,0 +1,31 @@
+# Déclencheur des rappels.
+#
+# Le plan Hobby de Vercel limite les crons à une exécution par jour ; ce
+# workflow prend le relais avec une cadence utile. L'endpoint est idempotent
+# (une notification par tâche et par jour), donc un déclenchement en double ou
+# en retard est sans conséquence — ce qui tombe bien, le planificateur de
+# GitHub Actions n'est pas ponctuel à la minute.
+name: rappels
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déclencher les rappels
+        env:
+          URL: ${{ secrets.PRODUCTION_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          status=$(curl -s -o /tmp/body -w '%{http_code}' \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${URL}/api/cron/reminders")
+          echo "statut ${status}"
+          cat /tmp/body
+          echo
+          test "${status}" = "200"
