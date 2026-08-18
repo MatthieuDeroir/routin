@@ -2,19 +2,19 @@ import "server-only";
 import { and, between, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { completions, dayMoments, routines, tasks } from "@/db/schema";
+import type { DayString } from "@/lib/domain";
 import type {
-  Completion,
-  DayMoment,
-  DayString,
-  Routine,
-  Task,
-} from "@/lib/domain";
+  StoredCompletion,
+  StoredMoment,
+  StoredRoutine,
+  StoredTask,
+} from "@/lib/store/types";
 
 export interface RoutineData {
-  moments: DayMoment[];
-  routines: Routine[];
-  tasks: Task[];
-  completions: Completion[];
+  moments: StoredMoment[];
+  routines: StoredRoutine[];
+  tasks: StoredTask[];
+  completions: StoredCompletion[];
 }
 
 /**
@@ -60,6 +60,8 @@ export async function getRoutineData(
       startMinute: row.startMinute,
       endMinute: row.endMinute,
       position: row.position,
+      updatedAt: row.updatedAt,
+      deletedAt: row.deletedAt,
     })),
     routines: routineRows.map((row) => ({
       id: row.id,
@@ -68,6 +70,8 @@ export async function getRoutineData(
       color: row.color,
       daysMask: row.daysMask,
       position: row.position,
+      updatedAt: row.updatedAt,
+      deletedAt: row.deletedAt,
     })),
     tasks: taskRows.map((row) => ({
       id: row.id,
@@ -78,11 +82,15 @@ export async function getRoutineData(
       daysMask: row.daysMask,
       atMinute: row.atMinute,
       position: row.position,
+      updatedAt: row.updatedAt,
+      deletedAt: row.deletedAt,
     })),
     completions: completionRows.map((row) => ({
+      id: row.id,
       taskId: row.taskId,
       day: row.day,
       done: row.done,
+      updatedAt: row.updatedAt,
     })),
   };
 }

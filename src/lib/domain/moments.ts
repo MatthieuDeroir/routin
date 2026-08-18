@@ -12,7 +12,7 @@ export function formatMinute(minute: number): string {
 }
 
 /** Trie les moments par heure de début (l'ordre affiché suit la journée). */
-export function sortMoments(moments: readonly DayMoment[]): DayMoment[] {
+export function sortMoments<T extends DayMoment>(moments: readonly T[]): T[] {
   return [...moments].sort(
     (a, b) => a.startMinute - b.startMinute || a.position - b.position,
   );
@@ -25,10 +25,10 @@ export function sortMoments(moments: readonly DayMoment[]): DayMoment[] {
  * moment qu'on lui a assigné mais à celui dont les bornes contiennent son heure.
  * Le rangement suit donc automatiquement une modification des bornes.
  */
-export function momentAtMinute(
-  moments: readonly DayMoment[],
+export function momentAtMinute<T extends DayMoment>(
+  moments: readonly T[],
   minute: number,
-): DayMoment | null {
+): T | null {
   return (
     moments.find(
       (moment) => minute >= moment.startMinute && minute < moment.endMinute,
@@ -114,7 +114,7 @@ export function validateMoments(
  * Réajuste les bornes pour qu'elles restent contiguës quand on déplace une
  * frontière : chaque moment démarre là où le précédent s'arrête.
  */
-export function normalizeMoments(moments: readonly DayMoment[]): DayMoment[] {
+export function normalizeMoments<T extends DayMoment>(moments: readonly T[]): T[] {
   const sorted = sortMoments(moments);
   return sorted.map((moment, index) => ({
     ...moment,

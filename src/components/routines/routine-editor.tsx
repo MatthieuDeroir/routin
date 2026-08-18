@@ -1,0 +1,141 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Field, FormActions, TextInput } from "@/components/ui/field";
+import { ALL_DAYS } from "@/lib/domain";
+import { useStore } from "@/lib/store/store";
+import { cn } from "@/lib/utils";
+import { DaysPicker, DaysShortcuts } from "./days-picker";
+
+const COLORS = [
+  "#8a7a4e",
+  "#46605a",
+  "#3f6b8f",
+  "#7a5b8c",
+  "#a8564a",
+  "#5f7a45",
+];
+
+export function RoutineEditor({ id }: { id: string }) {
+  const router = useRouter();
+  const { data, ready, upsertRoutine, removeRoutine } = useStore();
+
+  const creating = id === "nouvelle";
+  const existing = creating ? null : data.routines.find((r) => r.id === id);
+
+  const [name, setName] = useState(existing?.name ?? "");
+  const [emoji, setEmoji] = useState(existing?.emoji ?? "");
+  const [color, setColor] = useState(existing?.color ?? COLORS[0]);
+  const [daysMask, setDaysMask] = useState(existing?.daysMask ?? ALL_DAYS);
+  const [hydrated, setHydrated] = useState(creating);
+
+  // Le magasin se remplit après le premier rendu : on recopie la routine dans
+  // le formulaire dès qu'elle apparaît, une seule fois, pour ne pas écraser la
+  // saisie en cours à chaque nouvelle fusion de données serveur.
+  if (!hydrated && existing) {
+    setName(existing.name);
+    setEmoji(existing.emoji ?? "");
+    setColor(existing.color ?? COLORS[0]);
+    setDaysMask(existing.daysMask);
+    setHydrated(true);
+  }
+
+  if (!ready) return null;
+  if (!creating && !existing) {
+    return (
+      <p className="text-muted-foreground px-5 py-10 text-sm">
+        Cette routine n’existe plus.
+      </p>
+    );
+  }
+
+  function save() {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    upsertRoutine({
+      id: creating ? crypto.randomUUID() : id,
+      name: trimmed,
+      emoji: emoji.trim() || null,
+      color,
+      daysMask,
+      position: existing?.position ?? data.routines.length,
+      updatedAt: Date.now(),
+      deletedAt: null,
+    });
+    router.push("/routines");
+  }
+
+  function destroy() {
+    removeRoutine(id);
+    router.push("/routines");
+  }
+
+  return (
+    <>
+      <div className="space-y-6 px-5">
+        <div className="flex gap-3">
+          <Field label="Emoji" className="w-24 shrink-0">
+            <TextInput
+              value={emoji}
+              onChange={(event) => setEmoji(event.target.value)}
+              placeholder="🌅"
+              maxLength={4}
+              className="text-center text-xl"
+            />
+          </Field>
+          <Field label="Nom" className="flex-1">
+            <TextInput
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Réveil, Sport, Travail…"
+              autoFocus={creating}
+            />
+          </Field>
+        </div>
+
+        <Field
+          label="Jours"
+          hint="Ces jours servent de valeur par défaut aux tâches de la routine ; chacune peut les surcharger."
+        >
+          <DaysPicker value={daysMask} onChange={setDaysMask} />
+          <DaysShortcuts onChange={setDaysMask} />
+        </Field>
+
+        <Field label="Couleur">
+          <div className="flex gap-2">
+            {COLORS.map((swatch) => (
+              <button
+                key={swatch}
+                type="button"
+                aria-label={`Couleur ${swatch}`}
+                aria-pressed={color === swatch}
+                onClick={() => setColor(swatch)}
+                style={{ backgroundColor: swatch }}
+                className={cn(
+                  "size-9 rounded-full transition-transform",
+                  color === swatch
+                    ? "ring-foreground scale-110 ring-2 ring-offset-2"
+                    : "opacity-70",
+                )}
+              />
+            ))}
+          </div>
+        </Field>
+      </div>
+
+      <FormActions>
+        <Button type="button" onClick={save} disabled={!name.trim()} className="flex-1">
+          {creating ? "Créer la routine" : "Enregistrer"}
+        </Button>
+        {!creating ? (
+          <Button type="button" variant="ghost" onClick={destroy}>
+            Supprimer
+          </Button>
+        ) : null}
+      </FormActions>
+    </>
+  );
+}

@@ -11,6 +11,8 @@ import { TaskRow } from "./task-row";
 
 interface DayPanelProps {
   schedule: DaySchedule;
+  /** Vrai tant que le cache local n'est pas lu : on n'annonce pas « rien de prévu ». */
+  empty?: boolean;
   /** Minute courante, ou `null` si le jour affiché n'est pas aujourd'hui. */
   nowMinute: number | null;
   onToggle: (taskId: string, done: boolean) => void;
@@ -19,10 +21,13 @@ interface DayPanelProps {
 
 export function DayPanel({
   schedule,
+  empty,
   nowMinute,
   onToggle,
   disabled,
 }: DayPanelProps) {
+  if (empty) return null;
+
   if (schedule.sections.length === 0) {
     return (
       <p className="text-muted-foreground border-[var(--rt-surface-border)] mx-1 rounded-[var(--radius)] border border-dashed px-4 py-10 text-center text-sm">

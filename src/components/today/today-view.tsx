@@ -13,12 +13,10 @@ import {
   buildDaySchedule,
   dayRange,
   weekdayOf,
-  type Completion,
-  type DayMoment,
   type DayString,
-  type Routine,
-  type Task,
 } from "@/lib/domain";
+import { SyncIndicator } from "@/components/sync-indicator";
+import { useStore } from "@/lib/store/store";
 import type { ThemeId } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { AmbientLight } from "./ambient-light";
@@ -29,27 +27,14 @@ interface TodayViewProps {
   theme: ThemeId;
   today: DayString;
   timeZone: string;
-  moments: DayMoment[];
-  routines: Routine[];
-  tasks: Task[];
-  completions: Completion[];
+  menu: React.ReactNode;
 }
 
-const completionKey = (taskId: string, day: DayString) => `${taskId}|${day}`;
+export function TodayView({ theme, today, timeZone, menu }: TodayViewProps) {
+  const { data, ready, setCompletion } = useStore();
+  const { moments, routines, tasks, completions } = data;
 
-export function TodayView({
-  theme,
-  today,
-  timeZone,
-  moments,
-  routines,
-  tasks,
-  completions,
-}: TodayViewProps) {
   const [day, setDay] = useState<DayString>(today);
-  // Les coches restent locales tant que le moteur de synchronisation n'est pas
-  // en place : même forme d'état que le futur cache, aucun aller-retour serveur.
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const [nowMinute, setNowMinute] = useState<number | null>(null);
 
   useEffect(() => {
@@ -69,20 +54,6 @@ export function TodayView({
     return () => window.clearInterval(timer);
   }, [timeZone]);
 
-  const mergedCompletions = useMemo(() => {
-    const merged = completions.map((completion) => {
-      const override = overrides[completionKey(completion.taskId, completion.day)];
-      return override === undefined ? completion : { ...completion, done: override };
-    });
-    const seen = new Set(merged.map((c) => completionKey(c.taskId, c.day)));
-    for (const [key, done] of Object.entries(overrides)) {
-      if (seen.has(key)) continue;
-      const [taskId, dayValue] = key.split("|");
-      merged.push({ taskId, day: dayValue, done });
-    }
-    return merged;
-  }, [completions, overrides]);
-
   const scheduleFor = useCallback(
     (target: DayString) =>
       buildDaySchedule({
@@ -90,9 +61,9 @@ export function TodayView({
         moments,
         routines,
         tasks,
-        completions: mergedCompletions,
+        completions,
       }),
-    [moments, routines, tasks, mergedCompletions],
+    [moments, routines, tasks, completions],
   );
 
   const days = useMemo(
@@ -115,13 +86,10 @@ export function TodayView({
 
   const toggle = useCallback(
     (taskId: string, done: boolean, target: DayString) => {
-      setOverrides((previous) => ({
-        ...previous,
-        [completionKey(taskId, target)]: done,
-      }));
+      setCompletion(taskId, target, done);
       if (done && "vibrate" in navigator) navigator.vibrate?.(8);
     },
-    [],
+    [setCompletion],
   );
 
   const scroller = useRef<HTMLDivElement>(null);
@@ -195,7 +163,11 @@ export function TodayView({
               {label}
             </h1>
           </div>
-          <DayProgress done={schedule.doneCount} total={schedule.totalCount} />
+          <div className="flex shrink-0 items-center gap-1.5">
+            <SyncIndicator />
+            <DayProgress done={schedule.doneCount} total={schedule.totalCount} />
+            {menu}
+          </div>
         </div>
 
         <nav className="mt-5" aria-label="Semaine">
@@ -218,6 +190,7 @@ export function TodayView({
             className="w-full shrink-0 snap-center px-4 pb-[max(2rem,env(safe-area-inset-bottom))]"
           >
             <DayPanel
+              empty={!ready}
               schedule={scheduleFor(current)}
               nowMinute={current === today ? nowMinute : null}
               disabled={current > today}
