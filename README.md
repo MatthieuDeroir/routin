@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Routin
 
-## Getting Started
+PWA de gestion de routines quotidiennes, avec granularité par jour de la semaine.
 
-First, run the development server:
+Next.js 16 (App Router) · Turso / libSQL + Drizzle · Auth.js v5 (Google) · Tailwind 4 + shadcn/ui · Vercel.
+
+Le plan de développement complet est dans [`docs/PLAN.md`](docs/PLAN.md).
+
+## Démarrage
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local     # puis compléter (voir « Configuration » ci-dessous)
+pnpm db:migrate                # crée local.db à partir des migrations
+pnpm dev                       # http://localhost:3002
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Le port 3002 est figé : l'URI de redirection OAuth de Google doit correspondre
+exactement, et les ports 3000/3001 servent à d'autres projets.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Configuration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Obtention |
+| --- | --- |
+| `DATABASE_URL` | `file:./local.db` en développement ; URL `libsql://` de Turso en production |
+| `DATABASE_AUTH_TOKEN` | `turso db tokens create <db>` (production uniquement) |
+| `AUTH_SECRET` | `npx auth secret` |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google Cloud Console → Identifiants → ID client OAuth 2.0 (type « Application Web ») |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `npx web-push generate-vapid-keys` |
+| `CRON_SECRET` | valeur aléatoire, protège la route de cron |
 
-## Learn More
+URI de redirection à déclarer côté Google, une par environnement :
 
-To learn more about Next.js, take a look at the following resources:
+- `http://localhost:3002/api/auth/callback/google`
+- `https://<domaine-de-production>/api/auth/callback/google`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Aucune valeur réelle ne doit être committée : `.env.local` est ignoré par git,
+un hook `gitleaks` bloque le commit en cas d'oubli, et la production passe par
+`vercel env`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Base de données
 
-## Deploy on Vercel
+```bash
+pnpm db:generate   # génère une migration SQL depuis le schéma Drizzle
+pnpm db:migrate    # backup automatique, puis application des migrations
+pnpm db:backup     # backup seul (copie du fichier local, ou dump Turso)
+pnpm db:studio     # explorateur Drizzle Studio
+node scripts/query.mjs "select * from routine"   # requête SQL ponctuelle
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`db:migrate` déclenche toujours un backup avant d'appliquer quoi que ce soit :
+les sauvegardes atterrissent dans `backups/` (ignoré par git).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Qualité
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test
+```
+
+Le pipeline `.github/workflows/security.yml` exécute à chaque push et PR :
+détection de secrets (gitleaks), SAST (Semgrep), analyse des dépendances et de
+la configuration (Trivy), et publie un SBOM CycloneDX.
