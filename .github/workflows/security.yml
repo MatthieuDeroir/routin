@@ -20,16 +20,16 @@ jobs:
   secret-detection:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: { fetch-depth: 0 }   # gitleaks a besoin de tout l'historique
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   sast:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Semgrep
         run: |
           docker run --rm -v "$PWD:/src" semgrep/semgrep \
@@ -38,8 +38,8 @@ jobs:
   dependency-scanning:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: aquasecurity/trivy-action@0.24.0
+      - uses: actions/checkout@v5
+      - uses: aquasecurity/trivy-action@0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -49,13 +49,13 @@ jobs:
   sbom:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: aquasecurity/trivy-action@0.24.0
+      - uses: actions/checkout@v5
+      - uses: aquasecurity/trivy-action@0.36.0
         with:
           scan-type: fs
           format: cyclonedx
           output: sbom.cdx.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: sbom
           path: sbom.cdx.json
@@ -64,8 +64,8 @@ jobs:
   iac-scanning:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: aquasecurity/trivy-action@0.24.0
+      - uses: actions/checkout@v5
+      - uses: aquasecurity/trivy-action@0.36.0
         with:
           scan-type: config
           scan-ref: .
@@ -76,8 +76,8 @@ jobs:
   # container-scanning:
   #   runs-on: ubuntu-latest
   #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: aquasecurity/trivy-action@0.24.0
+  #     - uses: actions/checkout@v5
+  #     - uses: aquasecurity/trivy-action@0.36.0
   #       with:
   #         scan-type: image
   #         image-ref: <registry>/<image>:<tag>

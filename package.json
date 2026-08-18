@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -p 3002",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
