@@ -86,3 +86,51 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+/* ── Notifications ──────────────────────────────────────────────────────────
+   Le `tag` vaut « tâche + jour » : si un rappel arrive deux fois, la seconde
+   notification remplace la première au lieu de s'empiler.
+   ------------------------------------------------------------------------ */
+
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: "Routin", body: event.data.text() };
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title ?? "Routin", {
+      body: payload.body ?? "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: payload.tag,
+      renotify: false,
+      data: { url: payload.url ?? "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = event.notification.data?.url ?? "/";
+
+  // On réutilise une fenêtre déjà ouverte plutôt que d'en empiler une nouvelle
+  // à chaque notification touchée.
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if (client.url.includes(self.location.origin) && "focus" in client) {
+            client.navigate(target);
+            return client.focus();
+          }
+        }
+        return self.clients.openWindow(target);
+      }),
+  );
+});
