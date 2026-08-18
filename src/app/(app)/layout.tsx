@@ -1,3 +1,4 @@
+import { ensureUserDefaults } from "@/lib/bootstrap-user";
 import { addDays, today as todayIn } from "@/lib/domain";
 import { getRoutineData } from "@/lib/queries";
 import { requireUser } from "@/lib/session";
@@ -12,6 +13,8 @@ const WINDOW_DAYS = 120;
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
+  await ensureUserDefaults(user.id);
+
   const today = todayIn(user.timeZone);
 
   const data = await getRoutineData(

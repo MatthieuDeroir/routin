@@ -15,6 +15,7 @@ import {
   weekdayOf,
   type DayString,
 } from "@/lib/domain";
+import Link from "next/link";
 import { SyncIndicator } from "@/components/sync-indicator";
 import { useStore } from "@/lib/store/store";
 import type { ThemeId } from "@/lib/theme";
@@ -180,8 +181,24 @@ export function TodayView({ theme, today, timeZone, menu }: TodayViewProps) {
         </nav>
       </header>
 
+      {tasks.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Rien à suivre pour l’instant. Une routine regroupe des tâches et
+            leurs jours ; une tâche peut aussi exister seule.
+          </p>
+          <Link
+            href="/routines/nouvelle"
+            className="border-input rounded-[var(--radius)] border px-4 py-2 text-sm"
+          >
+            Créer ma première routine
+          </Link>
+        </div>
+      ) : null}
+
       <div
         ref={scroller}
+        hidden={tasks.length === 0}
         className="mt-6 flex flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {days.map((current) => (
