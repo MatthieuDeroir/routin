@@ -1,37 +1,44 @@
 "use client";
 
+import Link from "next/link";
+import { useState } from "react";
 import { formatMinute, type ScheduleEntry } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 
 interface TaskRowProps {
   entry: ScheduleEntry;
   onToggle: (taskId: string, done: boolean) => void;
+  onRemove: (taskId: string) => void;
   /** Verrouille les coches sur un jour futur : on ne valide pas d'avance. */
   disabled?: boolean;
 }
 
-export function TaskRow({ entry, onToggle, disabled }: TaskRowProps) {
+export function TaskRow({ entry, onToggle, onRemove, disabled }: TaskRowProps) {
   const { task, routine, done } = entry;
+  const [confirming, setConfirming] = useState(false);
   const timed = task.atMinute !== null && task.atMinute !== undefined;
 
   return (
-    <li>
+    <li
+      className={cn(
+        "group flex items-center gap-3 rounded-[var(--radius)] px-3 py-[var(--rt-row-py)]",
+        "border border-[var(--rt-surface-border)] bg-[var(--rt-surface)]",
+        "shadow-[var(--rt-shadow)] transition-colors",
+      )}
+      style={{ backdropFilter: "var(--rt-backdrop)" }}
+    >
       <button
         type="button"
         disabled={disabled}
         aria-pressed={done}
         onClick={() => onToggle(task.id, !done)}
         className={cn(
-          "group flex w-full items-center gap-3 rounded-[var(--radius)] px-3 py-[var(--rt-row-py)] text-left",
-          "border border-[var(--rt-surface-border)] bg-[var(--rt-surface)]",
-          "shadow-[var(--rt-shadow)] backdrop-blur-[0px] transition-colors",
-          "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+          "flex min-w-0 flex-1 items-center gap-3 text-left",
+          "focus-visible:ring-ring rounded-[var(--radius)] focus-visible:ring-2 focus-visible:outline-none",
           "disabled:opacity-45",
         )}
-        style={{ backdropFilter: "var(--rt-backdrop)" }}
       >
         <Checkbox done={done} />
-
         <span className="min-w-0 flex-1">
           <span
             className={cn(
@@ -48,20 +55,89 @@ export function TaskRow({ entry, onToggle, disabled }: TaskRowProps) {
             </span>
           ) : null}
         </span>
-
-        {timed ? (
-          <time className="rt-num text-muted-foreground shrink-0 text-xs tabular-nums">
-            {formatMinute(task.atMinute as number)}
-          </time>
-        ) : null}
       </button>
+
+      {timed ? (
+        <time className="rt-num text-muted-foreground shrink-0 text-xs tabular-nums">
+          {formatMinute(task.atMinute as number)}
+        </time>
+      ) : null}
+
+      {/*
+        Les actions n'apparaissent qu'au survol : elles sont rares comparées à
+        la coche, et les afficher en permanence encombrerait chaque ligne. Sur
+        écran tactile, où il n'y a pas de survol, elles restent visibles en
+        retrait.
+      */}
+      <div
+        className={cn(
+          "flex shrink-0 items-center gap-0.5 transition-opacity duration-150",
+          "opacity-0 group-hover:opacity-100 focus-within:opacity-100",
+          "[@media(pointer:coarse)]:opacity-45",
+        )}
+      >
+        {confirming ? (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                onRemove(task.id);
+                setConfirming(false);
+              }}
+              className="text-destructive px-2 py-1 text-xs whitespace-nowrap"
+            >
+              Retirer
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="text-muted-foreground px-1 py-1 text-xs"
+            >
+              Annuler
+            </button>
+          </>
+        ) : (
+          <>
+            <Link
+              href={`/taches/${task.id}`}
+              aria-label={`Modifier « ${task.name} »`}
+              className="text-muted-foreground hover:text-foreground grid size-8 place-items-center rounded-full"
+            >
+              <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden>
+                <path
+                  d="M4 20h4L19 9l-4-4L4 16v4Z"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              aria-label={`Retirer « ${task.name} »`}
+              className="text-muted-foreground hover:text-destructive grid size-8 place-items-center rounded-full"
+            >
+              <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden>
+                <path
+                  d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </>
+        )}
+      </div>
     </li>
   );
 }
 
 /**
  * La coche est le geste répété plusieurs fois par jour : elle porte l'essentiel
- * du caractère de chaque direction. Le tracé se dessine plutôt que d'apparaître,
+ * du caractère de chaque thème. Le tracé se dessine plutôt que d'apparaître,
  * ce qui donne au geste un poids proportionnel à ce qu'il représente.
  */
 function Checkbox({ done }: { done: boolean }) {

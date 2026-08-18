@@ -31,8 +31,10 @@ export const taskSchema = z.object({
   daysMask: z.number().int().min(0).max(127).nullable(),
   atMinute: z.number().int().min(0).max(1439).nullable(),
   position: z.number().int().min(0).max(10000),
-  activeFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
-  activeUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  // Tolérant à l'absence : une tâche encore en cache dans un navigateur d'avant
+  // l'introduction des bornes doit pouvoir remonter, pas être rejetée.
+  activeFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  activeUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   ...syncFields,
 });
 

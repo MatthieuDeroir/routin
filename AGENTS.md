@@ -25,8 +25,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **Placement d'une tâche** : elle appartient à une routine ou à aucune (« dans la
   journée »). `atMinute` ne fait que la trier en tête de son bloc, il ne change
   jamais son appartenance.
-- **Une directive** (`kind: "directive"`) n'a ni routine ni heure : elle vaut pour
-  la journée entière et s'affiche en pied d'écran.
+- **`kind` est une polarité, pas une nature d'objet** : `task` = ce qu'il FAUT
+  faire, `directive` = ce qu'il faut ÉVITER sur la journée entière. Une directive
+  n'a ni routine ni heure et s'affiche en tête d'écran, sous le libellé « À éviter ».
+- **Toute tâche porte une période de validité** (`activeFrom` / `activeUntil`,
+  `null` = sans borne). Créer, c'est fixer `activeFrom` au jour affiché ; retirer,
+  c'est fixer `activeUntil` à la veille — jamais supprimer, sauf si la tâche n'a
+  aucune journée derrière elle. Une suppression franche réécrirait l'historique.
+- **L'horodatage de synchronisation est posé par le magasin**, jamais par
+  l'appelant : `upsertTask` et `upsertRoutine` prennent la ligne sans `updatedAt`.
 - **`daysMask`** est un bitmask 0–127, bit 0 = lundi. `NULL` sur une tâche
   signifie « hérite de la routine ».
 - **Backup avant toute migration.** `pnpm db:migrate` l'impose ; ne pas

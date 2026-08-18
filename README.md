@@ -20,8 +20,16 @@ Trois natures de contenu :
 - une **tâche** dans une routine, avec ou sans heure précise (l'heure ne fait que la trier en
   tête de son bloc) ;
 - une **tâche sans routine**, à faire ce jour-là — elle ouvre l'écran, dans « Dans la journée » ;
-- une **directive** : une règle à tenir sur la journée entière (« pas de caféine après
-  11 h 30 »), en pied d'écran, qu'on valide le soir. Comme tout le reste, elle porte une série.
+- une ligne **à éviter** : ce qu'il ne faut *pas* faire de la journée (« pas de caféine après
+  11 h 30 »). Ce n'est pas une autre nature d'objet, c'est la polarité inverse — elle s'affiche
+  en tête d'écran, se valide le soir, et porte une série comme le reste.
+
+Chaque tâche a une **période de validité** : en créer une aujourd'hui ne la fait pas apparaître
+dans l'historique, et en retirer une la laisse dans les journées où elle a réellement existé.
+Sans cela, chaque modification réécrirait les statistiques du passé.
+
+Tout s'ajoute, se modifie et se retire depuis la journée elle-même : un « + Ajouter » au pied
+de chaque bloc, et les actions d'édition qui apparaissent au survol d'une ligne.
 
 L'application est **local-first** : elle se lit et s'écrit hors ligne, et se réconcilie au
 retour du réseau (dernière écriture gagnante, ligne par ligne).

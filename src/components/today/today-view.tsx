@@ -21,7 +21,7 @@ import { useStore } from "@/lib/store/store";
 import type { ThemeId } from "@/lib/appearance";
 import { cn } from "@/lib/utils";
 import { AmbientLight } from "./ambient-light";
-import { DayPanel } from "./day-panel";
+import { DayPanel, type AddTarget } from "./day-panel";
 import { WeekStrip } from "./week-strip";
 
 interface TodayViewProps {
@@ -32,7 +32,7 @@ interface TodayViewProps {
 }
 
 export function TodayView({ theme, today, timeZone, menu }: TodayViewProps) {
-  const { data, ready, setCompletion } = useStore();
+  const { data, ready, setCompletion, upsertTask, endTask } = useStore();
   const { routines, tasks, completions } = data;
 
   const [day, setDay] = useState<DayString>(today);
@@ -85,6 +85,34 @@ export function TodayView({ theme, today, timeZone, menu }: TodayViewProps) {
       if (done && "vibrate" in navigator) navigator.vibrate?.(8);
     },
     [setCompletion],
+  );
+
+  const add = useCallback(
+    (name: string, target: AddTarget, on: DayString) => {
+      upsertTask({
+        id: crypto.randomUUID(),
+        routineId: target.routineId,
+        kind: target.kind,
+        name,
+        notes: null,
+        // Dans une routine, la tâche suit ses jours ; hors routine, elle est
+        // quotidienne par défaut — on affine dans l'éditeur si besoin.
+        daysMask: target.routineId ? null : 127,
+        atMinute: null,
+        position: tasks.length,
+        // Elle commence le jour où on l'ajoute, jamais avant : sans cette
+        // borne, elle réécrirait tout l'historique.
+        activeFrom: on,
+        activeUntil: null,
+        deletedAt: null,
+      });
+    },
+    [upsertTask, tasks.length],
+  );
+
+  const remove = useCallback(
+    (taskId: string, on: DayString) => endTask(taskId, addDays(on, -1)),
+    [endTask],
   );
 
   const scroller = useRef<HTMLDivElement>(null);
@@ -213,6 +241,8 @@ export function TodayView({ theme, today, timeZone, menu }: TodayViewProps) {
               nowMinute={current === today ? nowMinute : null}
               disabled={current > today}
               onToggle={(taskId, done) => toggle(taskId, done, current)}
+              onRemove={(taskId) => remove(taskId, current)}
+              onAdd={(name, target) => add(name, target, current)}
             />
           </div>
         ))}
