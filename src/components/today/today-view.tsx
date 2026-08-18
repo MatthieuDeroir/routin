@@ -180,9 +180,11 @@ export function TodayView({
       <header className="px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
         <div className="flex items-end justify-between gap-4">
           <div className="min-w-0">
-            {relative ? (
-              <p className="text-muted-foreground text-xs">{relative}</p>
-            ) : null}
+            {/* Ligne toujours rendue, même vide : la date ne doit pas se
+                déplacer selon qu'on est sur hier, aujourd'hui ou un autre jour. */}
+            <p className="text-muted-foreground text-xs" aria-hidden={!relative}>
+              {relative ?? "\u00A0"}
+            </p>
             <h1
               className="rt-display truncate leading-tight first-letter:uppercase"
               style={{

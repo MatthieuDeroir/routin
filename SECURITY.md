@@ -19,12 +19,9 @@ branche de maintenance.
 
 Merci de **ne pas** ouvrir d'issue publique pour une vulnérabilité de sécurité.
 
-Deux canaux, par ordre de préférence :
-
-1. **GitHub Private Vulnerability Reporting** — onglet *Security* du dépôt,
-   bouton *Report a vulnerability*. C'est le canal privilégié : le fil reste
-   privé et l'historique est attaché au dépôt.
-2. **Courriel** — matthieu.deroir@gmail.com
+Utilisez le **signalement privé de GitHub** : onglet *Security* du dépôt,
+bouton *Report a vulnerability*. Le fil reste privé entre vous et le
+mainteneur, et l'historique reste attaché au dépôt.
 
 Merci d'inclure :
 - une description de la vulnérabilité et de son impact potentiel,

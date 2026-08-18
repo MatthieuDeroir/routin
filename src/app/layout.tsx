@@ -14,19 +14,21 @@ import { THEME_COOKIE, resolveTheme } from "@/lib/theme";
 import "./globals.css";
 
 /**
- * Les trois directions visuelles ont chacune leur duo de caractères ; toutes
- * sont chargées le temps de la comparaison, et deux jeux disparaîtront une
- * fois la direction retenue.
+ * « Brume », la direction retenue, est la seule dont les caractères sont
+ * préchargés. Les cinq autres restent déclarées pour que /directions continue
+ * de fonctionner, mais avec `preload: false` : leurs fichiers ne sont
+ * téléchargés que si la direction correspondante est réellement active.
  */
-const archivo = Archivo({ variable: "--font-archivo", subsets: ["latin"], weight: ["600", "700"] });
-const plexSans = IBM_Plex_Sans({ variable: "--font-plex-sans", subsets: ["latin"], weight: ["400", "500", "600"] });
-const plexMono = IBM_Plex_Mono({ variable: "--font-plex-mono", subsets: ["latin"], weight: ["400", "500"] });
 const sora = Sora({ variable: "--font-sora", subsets: ["latin"], weight: ["500", "600"] });
 const dmSans = DM_Sans({ variable: "--font-dm-sans", subsets: ["latin"], weight: ["400", "500", "700"] });
-const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"], weight: ["600", "700"] });
-const karla = Karla({ variable: "--font-karla", subsets: ["latin"], weight: ["400", "500", "600"] });
 
-const fontVariables = [archivo, plexSans, plexMono, sora, dmSans, bricolage, karla]
+const archivo = Archivo({ variable: "--font-archivo", subsets: ["latin"], weight: ["600", "700"], preload: false });
+const plexSans = IBM_Plex_Sans({ variable: "--font-plex-sans", subsets: ["latin"], weight: ["400", "500", "600"], preload: false });
+const plexMono = IBM_Plex_Mono({ variable: "--font-plex-mono", subsets: ["latin"], weight: ["400", "500"], preload: false });
+const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"], weight: ["600", "700"], preload: false });
+const karla = Karla({ variable: "--font-karla", subsets: ["latin"], weight: ["400", "500", "600"], preload: false });
+
+const fontVariables = [sora, dmSans, archivo, plexSans, plexMono, bricolage, karla]
   .map((font) => font.variable)
   .join(" ");
 
@@ -50,8 +52,8 @@ export const viewport: Viewport = {
   maximumScale: 5,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5f7f9" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0e14" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f4f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#151918" },
   ],
 };
 

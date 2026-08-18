@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { signOut } from "@/auth";
-import { ThemeSwitcher } from "@/components/theme-switcher";
+import Link from "next/link";
 import { TodayView } from "@/components/today/today-view";
 import { addDays, today as todayIn } from "@/lib/domain";
 import { getRoutineData } from "@/lib/queries";
@@ -33,22 +33,28 @@ export default async function HomePage() {
         completions={data.completions}
       />
 
-      <ThemeSwitcher current={theme} />
-
-      <form
-        className="px-5 pb-6"
-        action={async () => {
-          "use server";
-          await signOut({ redirectTo: "/login" });
-        }}
-      >
-        <button
-          type="submit"
+      <footer className="mt-8 flex items-center gap-5 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <Link
+          href="/directions"
           className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-4"
         >
-          Se déconnecter
-        </button>
-      </form>
+          Directions visuelles
+        </Link>
+
+        <form
+          action={async () => {
+            "use server";
+            await signOut({ redirectTo: "/login" });
+          }}
+        >
+          <button
+            type="submit"
+            className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-4"
+          >
+            Se déconnecter
+          </button>
+        </form>
+      </footer>
     </main>
   );
 }

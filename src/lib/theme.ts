@@ -1,5 +1,10 @@
 export const THEMES = [
   {
+    id: "brume",
+    name: "Brume",
+    idea: "Direction retenue. Ni carte, ni bordure, presque pas de couleur : le contraste passe par l’échelle typographique et le blanc.",
+  },
+  {
     id: "cadran",
     name: "Cadran",
     idea: "La journée comme un instrument : rail gradué, heures tabulaires, repère « maintenant » qui descend en temps réel.",
@@ -17,23 +22,19 @@ export const THEMES = [
   {
     id: "sequenceur",
     name: "Séquenceur",
-    idea: "La grammaire d’un séquenceur de musique : chaque moment est une piste, chaque tâche un pas, et un pas validé s’allume. Sombre, monospacé, calé sur une grille serrée.",
+    idea: "La grammaire d’un séquenceur de musique : chaque moment est une piste, chaque tâche un pas qui s’allume. Sombre, monospacé, grille serrée.",
   },
   {
     id: "riso",
     name: "Riso",
-    idea: "Deux encres sur du papier : outremer et orange fluo, trame de points visible, capitales condensées, ombres portées franches. L’énergie d’un objet imprimé.",
-  },
-  {
-    id: "brume",
-    name: "Brume",
-    idea: "Le pôle opposé : ni carte, ni bordure, presque pas de couleur. Le contraste passe par l’échelle typographique et le blanc.",
+    idea: "Deux encres sur papier : outremer et orange fluo, trame de points, capitales condensées, ombres portées franches.",
   },
 ] as const;
 
 export type ThemeId = (typeof THEMES)[number]["id"];
 
-export const DEFAULT_THEME: ThemeId = "cadran";
+/** Direction retenue. Les autres restent disponibles depuis /directions. */
+export const DEFAULT_THEME: ThemeId = "brume";
 export const THEME_COOKIE = "routin-direction";
 
 export function isThemeId(value: unknown): value is ThemeId {
