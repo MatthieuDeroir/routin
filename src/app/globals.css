@@ -129,4 +129,54 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Préférences d'apparence
+   ───────────────────────────────────────────────────────────────────────────
+   Les palettes des thèmes utilisent `light-dark()` : c'est `color-scheme` qui
+   décide laquelle s'applique. On la pilote donc explicitement, ce qui donne un
+   choix clair / sombre / système sans dupliquer la moindre couleur.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root,
+html[data-scheme="system"] {
+  color-scheme: light dark;
+}
+
+html[data-scheme="light"] {
+  color-scheme: light;
+}
+
+html[data-scheme="dark"] {
+  color-scheme: dark;
+}
+
+/* La taille du texte est un pourcentage de la valeur choisie dans le navigateur,
+   jamais une taille absolue : quelqu'un qui a agrandi la police système garde
+   son réglage, le nôtre s'y multiplie. */
+@layer base {
+  html {
+    font-size: calc(100% * var(--rt-text-scale, 1));
+  }
+}
+
+/* La densité pilote les rythmes verticaux plutôt que des tailles de police :
+   c'est l'espacement qui fait qu'une liste paraît serrée ou aérée. */
+:root {
+  --rt-row-py: 0.75rem;
+  --rt-section-gap: 1.75rem;
+  --rt-list-gap: 0.375rem;
+}
+
+html[data-density="compact"] {
+  --rt-row-py: 0.5rem;
+  --rt-section-gap: 1.25rem;
+  --rt-list-gap: 0.25rem;
+}
+
+html[data-density="large"] {
+  --rt-row-py: 1rem;
+  --rt-section-gap: 2.5rem;
+  --rt-list-gap: 0.625rem;
+}
+
 @import "./directions.css";

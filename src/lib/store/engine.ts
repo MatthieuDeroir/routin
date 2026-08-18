@@ -1,6 +1,6 @@
 "use client";
 
-import type { DayString } from "@/lib/domain";
+import { endTask, type DayString } from "@/lib/domain";
 import type { SyncResponse } from "@/lib/sync/contract";
 import {
   clearOutbox,
@@ -18,7 +18,6 @@ import type {
   EntityKind,
   Snapshot,
   StoredCompletion,
-  StoredMoment,
   StoredRoutine,
   StoredTask,
 } from "./types";
@@ -128,12 +127,13 @@ export class RoutinStore {
     void this.flush();
   }
 
-  saveMoments(moments: StoredMoment[]) {
-    this.snapshot = { ...this.snapshot, moments };
-    this.write("moments", moments);
-  }
-
-  upsertRoutine(routine: StoredRoutine) {
+  /**
+   * L'horodatage de synchronisation est posé ici, jamais par l'appelant : c'est
+   * le magasin qui possède ces métadonnées, et un `updatedAt` oublié ou décalé
+   * fausserait silencieusement la résolution de conflit.
+   */
+  upsertRoutine(input: Omit<StoredRoutine, "updatedAt">) {
+    const routine: StoredRoutine = { ...input, updatedAt: Date.now() };
     this.snapshot = {
       ...this.snapshot,
       routines: [
@@ -144,12 +144,30 @@ export class RoutinStore {
     this.write("routines", [routine]);
   }
 
-  upsertTask(task: StoredTask) {
+  upsertTask(input: Omit<StoredTask, "updatedAt">) {
+    const task: StoredTask = { ...input, updatedAt: Date.now() };
     this.snapshot = {
       ...this.snapshot,
       tasks: [...this.snapshot.tasks.filter((item) => item.id !== task.id), task],
     };
     this.write("tasks", [task]);
+  }
+
+  /** Réordonne les routines : leur position est l'ordre de la journée. */
+  reorderRoutines(ids: string[]) {
+    const now = Date.now();
+    const rank = new Map(ids.map((id, index) => [id, index]));
+    const routines = this.snapshot.routines.map((routine) => {
+      const position = rank.get(routine.id);
+      return position === undefined || position === routine.position
+        ? routine
+        : { ...routine, position, updatedAt: now };
+    });
+    const changed = routines.filter(
+      (routine, index) => routine !== this.snapshot.routines[index],
+    );
+    this.snapshot = { ...this.snapshot, routines };
+    this.write("routines", changed);
   }
 
   removeRoutine(id: string) {
@@ -168,11 +186,23 @@ export class RoutinStore {
     this.write("tasks", tasks.filter((task) => task.routineId === id));
   }
 
-  removeTask(id: string) {
+  /**
+   * Retire une tâche à partir d'aujourd'hui, sans toucher aux journées passées.
+   *
+   * Une suppression franche réécrirait l'historique : une tâche tenue trente
+   * jours disparaîtrait des trente journées où elle a réellement été faite, et
+   * les statistiques avec elle. On borne donc sa validité — sauf si elle n'a
+   * jamais eu une seule journée derrière elle.
+   */
+  endTask(id: string, yesterday: string) {
     const now = Date.now();
-    const tasks = this.snapshot.tasks.map((task) =>
-      task.id === id ? { ...task, deletedAt: now, updatedAt: now } : task,
-    );
+    const tasks = this.snapshot.tasks.map((task) => {
+      if (task.id !== id) return task;
+      const outcome = endTask(task, yesterday);
+      return "deleted" in outcome
+        ? { ...task, deletedAt: now, updatedAt: now }
+        : { ...task, activeUntil: outcome.activeUntil, updatedAt: now };
+    });
     this.snapshot = { ...this.snapshot, tasks };
     this.write("tasks", tasks.filter((task) => task.id === id));
   }
@@ -245,7 +275,6 @@ export class RoutinStore {
       await writeCursor(result.cursor);
 
       this.snapshot = mergeSnapshots(this.snapshot, {
-        moments: result.changes.moments as StoredMoment[],
         routines: result.changes.routines as StoredRoutine[],
         tasks: result.changes.tasks as StoredTask[],
         completions: result.changes.completions as StoredCompletion[],

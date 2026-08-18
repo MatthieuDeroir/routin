@@ -6,59 +6,47 @@ import { Button } from "@/components/ui/button";
 import { Field, FormActions, Select, TextArea, TextInput } from "@/components/ui/field";
 import {
   ALL_DAYS,
-  formatMinute,
-  momentAtMinute,
-  sortMoments,
+  addDays,
+  minutesToTimeInput,
+  timeInputToMinutes,
+  type DayString,
+  type TaskKind,
 } from "@/lib/domain";
 import { useStore } from "@/lib/store/store";
 import { cn } from "@/lib/utils";
 import { DaysPicker, DaysShortcuts } from "./days-picker";
 
-type Placement = "anytime" | "moment" | "time";
-
-function minutesToTime(minute: number): string {
-  return `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
-}
-
-function timeToMinutes(value: string): number {
-  const [hours, minutes] = value.split(":").map(Number);
-  return (hours || 0) * 60 + (minutes || 0);
-}
-
-export function TaskEditor({ id }: { id: string }) {
+export function TaskEditor({ id, today }: { id: string; today: DayString }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data, ready, upsertTask, removeTask } = useStore();
+  const { data, ready, upsertTask, endTask } = useStore();
 
   const creating = id === "nouvelle";
   const existing = creating ? null : data.tasks.find((task) => task.id === id);
-  const moments = sortMoments(data.moments);
 
+  const [kind, setKind] = useState<TaskKind>(
+    searchParams.get("type") === "directive" ? "directive" : "task",
+  );
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
-  const [routineId, setRoutineId] = useState<string>(
-    searchParams.get("routine") ?? "",
-  );
+  const [routineId, setRoutineId] = useState(searchParams.get("routine") ?? "");
   const [overrideDays, setOverrideDays] = useState(false);
   const [daysMask, setDaysMask] = useState(ALL_DAYS);
-  const [placement, setPlacement] = useState<Placement>("anytime");
-  const [momentId, setMomentId] = useState<string>("");
+  const [timed, setTimed] = useState(false);
   const [time, setTime] = useState("07:00");
   const [hydrated, setHydrated] = useState(creating);
 
   // Recopie unique de la tâche dans le formulaire dès que le magasin est prêt :
   // refaire cette copie à chaque fusion écraserait la saisie en cours.
   if (!hydrated && existing) {
+    setKind(existing.kind);
     setName(existing.name);
     setNotes(existing.notes ?? "");
     setRoutineId(existing.routineId ?? "");
     setOverrideDays(existing.daysMask !== null);
     setDaysMask(existing.daysMask ?? ALL_DAYS);
-    setPlacement(
-      existing.atMinute !== null ? "time" : existing.momentId ? "moment" : "anytime",
-    );
-    setMomentId(existing.momentId ?? "");
-    if (existing.atMinute !== null) setTime(minutesToTime(existing.atMinute));
+    setTimed(existing.atMinute !== null);
+    if (existing.atMinute !== null) setTime(minutesToTimeInput(existing.atMinute));
     setHydrated(true);
   }
 
@@ -71,9 +59,9 @@ export function TaskEditor({ id }: { id: string }) {
     );
   }
 
+  const isDirective = kind === "directive";
   const routine = data.routines.find((item) => item.id === routineId) ?? null;
-  const derivedMoment =
-    placement === "time" ? momentAtMinute(moments, timeToMinutes(time)) : null;
+  const followsRoutine = Boolean(routine) && !overrideDays && !isDirective;
 
   function save() {
     const trimmed = name.trim();
@@ -81,69 +69,51 @@ export function TaskEditor({ id }: { id: string }) {
 
     upsertTask({
       id: creating ? crypto.randomUUID() : id,
-      routineId: routineId || null,
-      momentId: placement === "moment" ? momentId || null : null,
-      atMinute: placement === "time" ? timeToMinutes(time) : null,
+      kind,
+      // Une directive vaut pour la journée entière : ni routine ni heure.
+      routineId: isDirective ? null : routineId || null,
+      atMinute: isDirective || !timed ? null : timeInputToMinutes(time),
       name: trimmed,
       notes: notes.trim() || null,
       // Sans routine, la tâche doit porter ses propres jours : il n'y a rien
       // dont hériter.
-      daysMask: overrideDays || !routineId ? daysMask : null,
+      daysMask: followsRoutine ? null : daysMask,
       position: existing?.position ?? data.tasks.length,
-      updatedAt: Date.now(),
+      // Une tâche créée aujourd'hui n'a pas existé hier : sans cette borne,
+      // elle apparaîtrait rétroactivement dans tout l'historique.
+      activeFrom: existing?.activeFrom ?? today,
+      activeUntil: existing?.activeUntil ?? null,
       deletedAt: null,
     });
-    router.push("/routines");
-  }
-
-  function destroy() {
-    removeTask(id);
     router.push("/routines");
   }
 
   return (
     <>
       <div className="space-y-6 px-5">
-        <Field label="Nom">
-          <TextInput
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Étirements, Lecture, Appeler…"
-            autoFocus={creating}
-          />
-        </Field>
-
-        <Field label="Routine" hint="Une tâche peut exister seule, sans routine.">
-          <Select
-            value={routineId}
-            onChange={(event) => setRoutineId(event.target.value)}
-          >
-            <option value="">Aucune</option>
-            {data.routines.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        <Field label="Quand dans la journée">
-          <div className="grid grid-cols-3 gap-2">
+        <Field
+          label="Dans la journée, c’est quelque chose…"
+          hint={
+            isDirective
+              ? "Une ligne à tenir toute la journée. Elle s’affiche en tête de l’écran et se valide le soir."
+              : "Une action à mener, dans un bloc de la journée et éventuellement à une heure donnée."
+          }
+        >
+          <div className="grid grid-cols-2 gap-2">
             {(
               [
-                ["anytime", "Dans la journée"],
-                ["moment", "Un moment"],
-                ["time", "Une heure"],
-              ] as [Placement, string][]
+                ["task", "à faire"],
+                ["directive", "à éviter"],
+              ] as [TaskKind, string][]
             ).map(([value, label]) => (
               <button
                 key={value}
                 type="button"
-                aria-pressed={placement === value}
-                onClick={() => setPlacement(value)}
+                aria-pressed={kind === value}
+                onClick={() => setKind(value)}
                 className={cn(
-                  "rounded-[var(--radius)] border px-2 py-2 text-xs transition-colors",
-                  placement === value
+                  "rounded-[var(--radius)] border px-3 py-2 text-sm transition-colors",
+                  kind === value
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-input bg-[var(--rt-surface)] text-muted-foreground",
                 )}
@@ -152,41 +122,69 @@ export function TaskEditor({ id }: { id: string }) {
               </button>
             ))}
           </div>
-
-          {placement === "moment" ? (
-            <Select
-              className="mt-3"
-              value={momentId}
-              onChange={(event) => setMomentId(event.target.value)}
-            >
-              <option value="">Choisir un moment…</option>
-              {moments.map((moment) => (
-                <option key={moment.id} value={moment.id}>
-                  {moment.name} ({formatMinute(moment.startMinute)} –{" "}
-                  {formatMinute(moment.endMinute % 1440)})
-                </option>
-              ))}
-            </Select>
-          ) : null}
-
-          {placement === "time" ? (
-            <div className="mt-3 space-y-2">
-              <TextInput
-                type="time"
-                value={time}
-                onChange={(event) => setTime(event.target.value)}
-              />
-              <p className="text-muted-foreground text-xs">
-                {derivedMoment
-                  ? `Rangée dans « ${derivedMoment.name} », d’après ses bornes horaires.`
-                  : "Aucun moment ne couvre cette heure : la tâche apparaîtra dans « Dans la journée »."}
-              </p>
-            </div>
-          ) : null}
         </Field>
 
+        <Field label={isDirective ? "Ce qu’il faut éviter" : "Nom"}>
+          <TextInput
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={
+              isDirective
+                ? "Pas de caféine après 11 h 30"
+                : "Étirements, Lecture, Appeler…"
+            }
+            autoFocus={creating}
+          />
+        </Field>
+
+        {!isDirective ? (
+          <>
+            <Field
+              label="Routine"
+              hint="Sans routine, la tâche apparaît dans « Dans la journée »."
+            >
+              <Select
+                value={routineId}
+                onChange={(event) => setRoutineId(event.target.value)}
+              >
+                <option value="">Aucune — dans la journée</option>
+                {[...data.routines]
+                  .sort((a, b) => a.position - b.position)
+                  .map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
+
+            <Field
+              label="Heure"
+              hint="Une heure ne fait que trier la tâche en tête de son bloc."
+            >
+              <label className="text-muted-foreground flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={timed}
+                  onChange={(event) => setTimed(event.target.checked)}
+                  className="accent-[var(--primary)]"
+                />
+                À une heure précise
+              </label>
+              {timed ? (
+                <TextInput
+                  type="time"
+                  value={time}
+                  onChange={(event) => setTime(event.target.value)}
+                  className="mt-3"
+                />
+              ) : null}
+            </Field>
+          </>
+        ) : null}
+
         <Field label="Jours">
-          {routine ? (
+          {routine && !isDirective ? (
             <label className="text-muted-foreground mb-3 flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -199,14 +197,11 @@ export function TaskEditor({ id }: { id: string }) {
           ) : null}
 
           <DaysPicker
-            value={overrideDays || !routine ? daysMask : routine.daysMask}
+            value={followsRoutine && routine ? routine.daysMask : daysMask}
             onChange={setDaysMask}
-            disabled={Boolean(routine) && !overrideDays}
+            disabled={followsRoutine}
           />
-          <DaysShortcuts
-            onChange={setDaysMask}
-            disabled={Boolean(routine) && !overrideDays}
-          />
+          <DaysShortcuts onChange={setDaysMask} disabled={followsRoutine} />
         </Field>
 
         <Field label="Notes">
@@ -220,10 +215,17 @@ export function TaskEditor({ id }: { id: string }) {
 
       <FormActions>
         <Button type="button" onClick={save} disabled={!name.trim()} className="flex-1">
-          {creating ? "Créer la tâche" : "Enregistrer"}
+          {creating ? "Créer" : "Enregistrer"}
         </Button>
         {!creating ? (
-          <Button type="button" variant="ghost" onClick={destroy}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              endTask(id, addDays(today, -1));
+              router.push("/routines");
+            }}
+          >
             Supprimer
           </Button>
         ) : null}

@@ -51,31 +51,17 @@ CREATE TABLE `completion` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `completion_task_day_idx` ON `completion` (`task_id`,`day`);--> statement-breakpoint
 CREATE INDEX `completion_user_day_idx` ON `completion` (`user_id`,`day`);--> statement-breakpoint
-CREATE TABLE `day_moment` (
+CREATE TABLE `nudge_log` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
-	`name` text NOT NULL,
-	`emoji` text,
-	`start_minute` integer NOT NULL,
-	`end_minute` integer NOT NULL,
-	`position` integer DEFAULT 0 NOT NULL,
-	`updated_at` integer NOT NULL,
-	`deleted_at` integer,
+	`day` text NOT NULL,
+	`reason` text NOT NULL,
+	`sent_at` integer NOT NULL,
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `day_moment_user_idx` ON `day_moment` (`user_id`);--> statement-breakpoint
-CREATE TABLE `push_log` (
-	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
-	`task_id` text NOT NULL,
-	`day` text NOT NULL,
-	`sent_at` integer NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`task_id`) REFERENCES `task`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `push_log_task_day_idx` ON `push_log` (`task_id`,`day`);--> statement-breakpoint
+CREATE UNIQUE INDEX `nudge_log_user_day_reason_idx` ON `nudge_log` (`user_id`,`day`,`reason`);--> statement-breakpoint
+CREATE INDEX `nudge_log_user_idx` ON `nudge_log` (`user_id`);--> statement-breakpoint
 CREATE TABLE `push_subscription` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
@@ -107,7 +93,7 @@ CREATE TABLE `task` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
 	`routine_id` text,
-	`moment_id` text,
+	`kind` text DEFAULT 'task' NOT NULL,
 	`name` text NOT NULL,
 	`notes` text,
 	`days_mask` integer,
@@ -116,8 +102,7 @@ CREATE TABLE `task` (
 	`updated_at` integer NOT NULL,
 	`deleted_at` integer,
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`routine_id`) REFERENCES `routine`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`moment_id`) REFERENCES `day_moment`(`id`) ON UPDATE no action ON DELETE set null
+	FOREIGN KEY (`routine_id`) REFERENCES `routine`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE INDEX `task_user_idx` ON `task` (`user_id`);--> statement-breakpoint

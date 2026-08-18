@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "5edabd55-d319-4405-94cb-b66e28332023",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "8244a831-1883-48f7-8b02-aaa1f74f4f58",
+  "prevId": "5edabd55-d319-4405-94cb-b66e28332023",
   "tables": {
     "account": {
       "name": "account",
@@ -683,6 +683,20 @@
           "notNull": true,
           "autoincrement": false,
           "default": 0
+        },
+        "active_from": {
+          "name": "active_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "active_until": {
+          "name": "active_until",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "updated_at": {
           "name": "updated_at",

@@ -9,8 +9,7 @@ const LINKS = [
   { href: "/", label: "Aujourd’hui" },
   { href: "/routines", label: "Mes routines" },
   { href: "/stats", label: "Statistiques" },
-  { href: "/reglages", label: "Moments de la journée" },
-  { href: "/directions", label: "Direction visuelle" },
+  { href: "/reglages", label: "Réglages" },
 ];
 
 /**
@@ -18,7 +17,7 @@ const LINKS = [
  * geste. La navigation entre les jours appartient au balayage, pas à une barre
  * d'onglets qui mangerait le bas de l'écran en permanence.
  */
-export function AppMenu({ signOut }: { signOut: React.ReactNode }) {
+export function AppMenu() {
   const [open, setOpen] = useState(false);
   const container = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -87,9 +86,6 @@ export function AppMenu({ signOut }: { signOut: React.ReactNode }) {
               {link.label}
             </Link>
           ))}
-          <div className="border-t border-[var(--rt-surface-border)]">
-            {signOut}
-          </div>
         </div>
       ) : null}
     </div>

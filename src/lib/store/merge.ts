@@ -28,7 +28,6 @@ export function mergeRows<T extends Versioned>(
 
 export function mergeSnapshots(local: Snapshot, incoming: Snapshot): Snapshot {
   return {
-    moments: mergeRows(local.moments, incoming.moments),
     routines: mergeRows(local.routines, incoming.routines),
     tasks: mergeRows(local.tasks, incoming.tasks),
     completions: mergeRows(local.completions, incoming.completions),
@@ -41,7 +40,6 @@ export function visible(snapshot: Snapshot): Snapshot {
     rows.filter((row) => !row.deletedAt);
 
   return {
-    moments: alive(snapshot.moments),
     routines: alive(snapshot.routines),
     tasks: alive(snapshot.tasks),
     completions: snapshot.completions,
@@ -49,7 +47,6 @@ export function visible(snapshot: Snapshot): Snapshot {
 }
 
 export const emptySnapshot = (): Snapshot => ({
-  moments: [],
   routines: [],
   tasks: [],
   completions: [],

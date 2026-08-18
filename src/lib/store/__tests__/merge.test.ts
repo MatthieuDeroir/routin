@@ -33,17 +33,16 @@ describe("mergeRows", () => {
 describe("visible", () => {
   it("retire les entités supprimées logiquement", () => {
     const snapshot = {
-      moments: [
-        { id: "m1", updatedAt: 1, deletedAt: null },
-        { id: "m2", updatedAt: 1, deletedAt: 1700 },
+      routines: [
+        { id: "r1", updatedAt: 1, deletedAt: null },
+        { id: "r2", updatedAt: 1, deletedAt: 1700 },
       ],
-      routines: [],
       tasks: [{ id: "t1", updatedAt: 1, deletedAt: 1700 }],
       completions: [{ id: "c1", updatedAt: 1 }],
     } as unknown as Snapshot;
 
     const result = visible(snapshot);
-    expect(result.moments.map((m) => m.id)).toEqual(["m1"]);
+    expect(result.routines.map((r) => r.id)).toEqual(["r1"]);
     expect(result.tasks).toEqual([]);
     // Les coches n'ont pas de suppression logique : décocher, c'est `done: false`.
     expect(result.completions).toHaveLength(1);

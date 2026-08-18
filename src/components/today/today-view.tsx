@@ -18,7 +18,7 @@ import {
 import Link from "next/link";
 import { SyncIndicator } from "@/components/sync-indicator";
 import { useStore } from "@/lib/store/store";
-import type { ThemeId } from "@/lib/theme";
+import type { ThemeId } from "@/lib/appearance";
 import { cn } from "@/lib/utils";
 import { AmbientLight } from "./ambient-light";
 import { DayPanel } from "./day-panel";
@@ -33,7 +33,7 @@ interface TodayViewProps {
 
 export function TodayView({ theme, today, timeZone, menu }: TodayViewProps) {
   const { data, ready, setCompletion } = useStore();
-  const { moments, routines, tasks, completions } = data;
+  const { routines, tasks, completions } = data;
 
   const [day, setDay] = useState<DayString>(today);
   const [nowMinute, setNowMinute] = useState<number | null>(null);
@@ -57,14 +57,8 @@ export function TodayView({ theme, today, timeZone, menu }: TodayViewProps) {
 
   const scheduleFor = useCallback(
     (target: DayString) =>
-      buildDaySchedule({
-        day: target,
-        moments,
-        routines,
-        tasks,
-        completions,
-      }),
-    [moments, routines, tasks, completions],
+      buildDaySchedule({ day: target, routines, tasks, completions }),
+    [routines, tasks, completions],
   );
 
   const days = useMemo(
@@ -184,14 +178,20 @@ export function TodayView({ theme, today, timeZone, menu }: TodayViewProps) {
       {tasks.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Rien à suivre pour l’instant. Une routine regroupe des tâches et
-            leurs jours ; une tâche peut aussi exister seule.
+            Vos blocs de journée sont prêts — Réveil, Matin, Midi, Après-midi,
+            Soir, Nuit. Il ne manque plus que ce que vous voulez y faire.
           </p>
           <Link
-            href="/routines/nouvelle"
+            href="/taches/nouvelle"
             className="border-input rounded-[var(--radius)] border px-4 py-2 text-sm"
           >
-            Créer ma première routine
+            Créer ma première tâche
+          </Link>
+          <Link
+            href="/routines"
+            className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-4"
+          >
+            Renommer ou réordonner les blocs
           </Link>
         </div>
       ) : null}
@@ -208,6 +208,7 @@ export function TodayView({ theme, today, timeZone, menu }: TodayViewProps) {
           >
             <DayPanel
               empty={!ready}
+              routines={routines}
               schedule={scheduleFor(current)}
               nowMinute={current === today ? nowMinute : null}
               disabled={current > today}

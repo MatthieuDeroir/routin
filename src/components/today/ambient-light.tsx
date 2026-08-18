@@ -22,14 +22,13 @@ export function AmbientLight({ minute }: { minute: number }) {
     <div
       aria-hidden
       className="pointer-events-none fixed inset-0 -z-10 transition-[background-image] duration-1000"
-      style={
-        {
-          backgroundImage: `linear-gradient(175deg, ${sky.light[0]} 0%, ${sky.light[1]} 100%)`,
-          "--sky-dark-a": sky.dark[0],
-          "--sky-dark-b": sky.dark[1],
-        } as React.CSSProperties
-      }
-      data-ambient
+      style={{
+        // `light-dark()` suit le color-scheme réglé par les préférences : le
+        // ciel bascule sur ses paliers nocturnes sans règle CSS séparée.
+        backgroundImage:
+          `linear-gradient(175deg, light-dark(${sky.light[0]}, ${sky.dark[0]}) 0%,` +
+          ` light-dark(${sky.light[1]}, ${sky.dark[1]}) 100%)`,
+      }}
     />
   );
 }

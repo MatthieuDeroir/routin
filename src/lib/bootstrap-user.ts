@@ -1,42 +1,44 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { dayMoments } from "@/db/schema";
+import { routines } from "@/db/schema";
+import { ALL_DAYS } from "@/lib/domain";
 
 /**
  * Découpage de journée par défaut, posé au premier chargement d'un compte.
  *
- * Sans moments, une tâche horodatée n'appartient à aucune section et l'écran
- * d'accueil d'un nouveau compte est vide : le premier geste attendu serait
- * d'aller configurer des bornes horaires, ce que personne n'a envie de faire
- * avant même d'avoir vu l'application. Ces cinq blocs sont modifiables et
- * supprimables dans les réglages.
+ * Sans routines, l'écran d'accueil d'un nouveau compte est vide et le premier
+ * geste attendu serait d'aller définir des blocs — ce que personne n'a envie de
+ * faire avant même d'avoir vu l'application. Ces six blocs se renomment, se
+ * réordonnent et se suppriment.
  */
-const DEFAULT_MOMENTS = [
-  { name: "Réveil", emoji: "🌅", startMinute: 0, endMinute: 480 },
-  { name: "Matin", emoji: "☕", startMinute: 480, endMinute: 720 },
-  { name: "Midi", emoji: "🍽️", startMinute: 720, endMinute: 840 },
-  { name: "Après-midi", emoji: "🌤️", startMinute: 840, endMinute: 1140 },
-  { name: "Soir", emoji: "🌙", startMinute: 1140, endMinute: 1440 },
+const DEFAULT_ROUTINES = [
+  { name: "Réveil", emoji: "🌅", color: "#8a7a4e" },
+  { name: "Matin", emoji: "☕", color: "#46605a" },
+  { name: "Midi", emoji: "🍽️", color: "#3f6b8f" },
+  { name: "Après-midi", emoji: "🌤️", color: "#7a5b8c" },
+  { name: "Soir", emoji: "🌙", color: "#a8564a" },
+  { name: "Nuit", emoji: "🌌", color: "#5f7a45" },
 ];
 
 export async function ensureUserDefaults(userId: string): Promise<void> {
   const existing = await db
-    .select({ id: dayMoments.id })
-    .from(dayMoments)
-    .where(eq(dayMoments.userId, userId))
+    .select({ id: routines.id })
+    .from(routines)
+    .where(eq(routines.userId, userId))
     .limit(1);
 
-  // On regarde même les moments supprimés : un compte qui a délibérément tout
+  // On regarde même les routines supprimées : un compte qui a délibérément tout
   // effacé ne doit pas voir la configuration par défaut revenir au rechargement.
   if (existing.length > 0) return;
 
   const now = Date.now();
-  await db.insert(dayMoments).values(
-    DEFAULT_MOMENTS.map((moment, index) => ({
-      ...moment,
+  await db.insert(routines).values(
+    DEFAULT_ROUTINES.map((routine, index) => ({
+      ...routine,
       id: crypto.randomUUID(),
       userId,
+      daysMask: ALL_DAYS,
       position: index,
       updatedAt: now,
       deletedAt: null,

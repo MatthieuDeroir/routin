@@ -1,9 +1,4 @@
-import type {
-  Completion,
-  DayMoment,
-  Routine,
-  Task,
-} from "@/lib/domain";
+import type { Completion, Routine, Task } from "@/lib/domain";
 
 /**
  * Toute entité synchronisable porte l'heure de sa dernière modification et une
@@ -16,19 +11,17 @@ export interface SyncFields {
   deletedAt: number | null;
 }
 
-export type StoredMoment = DayMoment & SyncFields;
 export type StoredRoutine = Routine & SyncFields;
 export type StoredTask = Task & SyncFields;
 export type StoredCompletion = Completion & { id: string; updatedAt: number };
 
 export interface Snapshot {
-  moments: StoredMoment[];
   routines: StoredRoutine[];
   tasks: StoredTask[];
   completions: StoredCompletion[];
 }
 
-export type EntityKind = "moments" | "routines" | "tasks" | "completions";
+export type EntityKind = "routines" | "tasks" | "completions";
 
 /**
  * Une mutation en attente d'envoi au serveur. Elle porte l'entité complète

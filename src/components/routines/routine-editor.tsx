@@ -62,7 +62,6 @@ export function RoutineEditor({ id }: { id: string }) {
       color,
       daysMask,
       position: existing?.position ?? data.routines.length,
-      updatedAt: Date.now(),
       deletedAt: null,
     });
     router.push("/routines");

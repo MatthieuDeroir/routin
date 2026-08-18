@@ -22,7 +22,7 @@ export function TaskRow({ entry, onToggle, disabled }: TaskRowProps) {
         aria-pressed={done}
         onClick={() => onToggle(task.id, !done)}
         className={cn(
-          "group flex w-full items-center gap-3 rounded-[var(--radius)] px-3 py-3 text-left",
+          "group flex w-full items-center gap-3 rounded-[var(--radius)] px-3 py-[var(--rt-row-py)] text-left",
           "border border-[var(--rt-surface-border)] bg-[var(--rt-surface)]",
           "shadow-[var(--rt-shadow)] backdrop-blur-[0px] transition-colors",
           "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",

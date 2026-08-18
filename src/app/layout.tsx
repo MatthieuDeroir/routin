@@ -10,7 +10,13 @@ import {
 } from "next/font/google";
 import { cookies } from "next/headers";
 import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
-import { THEME_COOKIE, resolveTheme } from "@/lib/theme";
+import {
+  APPEARANCE_COOKIE,
+  appearanceAttributes,
+  appearanceStyle,
+  parseAppearance,
+  themeColor,
+} from "@/lib/appearance";
 import "./globals.css";
 
 /**
@@ -45,25 +51,34 @@ export const metadata: Metadata = {
  * `viewportFit: "cover"` + les safe-area-inset du CSS : l'application occupe
  * tout l'écran une fois installée, encoche et barre de geste comprises.
  * Le zoom reste autorisé (jusqu'à x5) — le désactiver casserait l'accessibilité.
+ *
+ * La couleur de barre suit le thème choisi, d'où la lecture du cookie ici :
+ * une barre système figée sur une autre palette se voit immédiatement.
  */
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 5,
-  viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f2f4f2" },
-    { media: "(prefers-color-scheme: dark)", color: "#151918" },
-  ],
-};
+export async function generateViewport(): Promise<Viewport> {
+  const appearance = parseAppearance(
+    (await cookies()).get(APPEARANCE_COOKIE)?.value,
+  );
+
+  return {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    viewportFit: "cover",
+    themeColor: themeColor(appearance),
+  };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const theme = resolveTheme((await cookies()).get(THEME_COOKIE)?.value);
+  const appearance = parseAppearance(
+    (await cookies()).get(APPEARANCE_COOKIE)?.value,
+  );
 
   return (
     <html
       lang="fr"
-      data-theme={theme}
+      {...appearanceAttributes(appearance)}
+      style={appearanceStyle(appearance)}
       className={`${fontVariables} h-full antialiased`}
     >
       <body className="bg-background text-foreground flex min-h-full flex-col overscroll-y-none">

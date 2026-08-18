@@ -24,11 +24,11 @@ export function useStore() {
 
   return {
     ...state,
-    saveMoments: store.saveMoments.bind(store),
+    reorderRoutines: store.reorderRoutines.bind(store),
     upsertRoutine: store.upsertRoutine.bind(store),
     removeRoutine: store.removeRoutine.bind(store),
     upsertTask: store.upsertTask.bind(store),
-    removeTask: store.removeTask.bind(store),
+    endTask: store.endTask.bind(store),
     setCompletion: store.setCompletion.bind(store),
     flush: store.flush.bind(store),
   };

@@ -1,6 +1,6 @@
 /**
- * Données de démonstration : un utilisateur, ses moments, quatre routines,
- * quelques tâches libres et huit semaines d'historique.
+ * Données de démonstration : un utilisateur, ses routines, quelques tâches
+ * libres, deux directives et huit semaines d'historique.
  *
  * Le générateur est déterministe (PRNG à graine fixe) : deux exécutions
  * produisent le même historique, sinon impossible de comparer deux rendus de
@@ -12,8 +12,7 @@ import { eq } from "drizzle-orm";
 import { createDb } from "./client";
 import {
   completions,
-  dayMoments,
-  pushLog,
+  nudgeLog,
   pushSubscriptions,
   routines,
   tasks,
@@ -21,6 +20,7 @@ import {
 } from "./schema";
 import { ALL_DAYS, addDays, maskFromWeekdays, weekdayOf } from "@/lib/domain/days";
 import { isTaskActiveOnWeekday } from "@/lib/domain/schedule";
+import type { TaskKind } from "@/lib/domain/types";
 
 export const DEMO_USER_ID = "demo-user";
 export const DEMO_USER_EMAIL = "demo@routin.local";
@@ -39,31 +39,24 @@ function makeRandom(seed: number) {
 }
 
 const now = Date.now();
-
-const moments = [
-  { id: "m-reveil", name: "Réveil", emoji: "🌅", startMinute: 0, endMinute: 480 },
-  { id: "m-matin", name: "Matin", emoji: "☕", startMinute: 480, endMinute: 720 },
-  { id: "m-midi", name: "Midi", emoji: "🍽️", startMinute: 720, endMinute: 840 },
-  { id: "m-aprem", name: "Après-midi", emoji: "🌤️", startMinute: 840, endMinute: 1140 },
-  { id: "m-soir", name: "Soir", emoji: "🌙", startMinute: 1140, endMinute: 1440 },
-];
-
 const WEEKDAYS = maskFromWeekdays([0, 1, 2, 3, 4]);
 const LUN_MER_VEN = maskFromWeekdays([0, 2, 4]);
 const SAMEDI = maskFromWeekdays([5]);
 const DIMANCHE = maskFromWeekdays([6]);
 
 const demoRoutines = [
-  { id: "r-reveil", name: "Réveil", emoji: "🌅", color: "#f59e0b", daysMask: ALL_DAYS },
-  { id: "r-travail", name: "Travail", emoji: "💻", color: "#3b82f6", daysMask: WEEKDAYS },
-  { id: "r-sport", name: "Sport", emoji: "🏋️", color: "#ef4444", daysMask: LUN_MER_VEN },
-  { id: "r-soir", name: "Soir", emoji: "🌙", color: "#8b5cf6", daysMask: ALL_DAYS },
+  { id: "r-reveil", name: "Réveil", emoji: "🌅", color: "#8a7a4e", daysMask: ALL_DAYS },
+  { id: "r-matin", name: "Matin", emoji: "☕", color: "#46605a", daysMask: WEEKDAYS },
+  { id: "r-midi", name: "Midi", emoji: "🍽️", color: "#3f6b8f", daysMask: ALL_DAYS },
+  { id: "r-aprem", name: "Après-midi", emoji: "🌤️", color: "#7a5b8c", daysMask: LUN_MER_VEN },
+  { id: "r-soir", name: "Soir", emoji: "🌙", color: "#a8564a", daysMask: ALL_DAYS },
+  { id: "r-nuit", name: "Nuit", emoji: "🌌", color: "#5f7a45", daysMask: ALL_DAYS },
 ];
 
 interface SeedTask {
   id: string;
   routineId: string | null;
-  momentId: string | null;
+  kind: TaskKind;
   name: string;
   daysMask: number | null;
   atMinute: number | null;
@@ -71,25 +64,41 @@ interface SeedTask {
   reliability: number;
 }
 
+const t = (
+  id: string,
+  routineId: string | null,
+  name: string,
+  atMinute: number | null,
+  reliability: number,
+  daysMask: number | null = null,
+  kind: TaskKind = "task",
+): SeedTask => ({ id, routineId, kind, name, daysMask, atMinute, reliability });
+
 const demoTasks: SeedTask[] = [
-  { id: "t-eau", routineId: "r-reveil", momentId: "m-reveil", name: "Grand verre d'eau", daysMask: null, atMinute: null, reliability: 0.92 },
-  { id: "t-etirements", routineId: "r-reveil", momentId: null, name: "Étirements", daysMask: null, atMinute: 420, reliability: 0.74 },
-  { id: "t-journal", routineId: "r-reveil", momentId: null, name: "Journal", daysMask: null, atMinute: 440, reliability: 0.66 },
+  t("t-eau", "r-reveil", "Grand verre d'eau", null, 0.92),
+  t("t-etirements", "r-reveil", "Étirements", 420, 0.74),
+  t("t-journal", "r-reveil", "Journal", 440, 0.66),
 
-  { id: "t-priorites", routineId: "r-travail", momentId: null, name: "Revue des priorités", daysMask: null, atMinute: 540, reliability: 0.88 },
-  { id: "t-inbox", routineId: "r-travail", momentId: null, name: "Inbox à zéro", daysMask: null, atMinute: 1050, reliability: 0.71 },
-  { id: "t-marche", routineId: "r-travail", momentId: "m-midi", name: "Marche de 20 min", daysMask: null, atMinute: null, reliability: 0.58 },
+  t("t-priorites", "r-matin", "Revue des priorités", 540, 0.88),
+  t("t-focus", "r-matin", "Bloc de concentration", 600, 0.72),
 
-  { id: "t-seance", routineId: "r-sport", momentId: null, name: "Séance", daysMask: null, atMinute: 1110, reliability: 0.79 },
-  { id: "t-mobilite", routineId: "r-sport", momentId: null, name: "Mobilité", daysMask: maskFromWeekdays([1, 3]), atMinute: null, reliability: 0.45 },
+  t("t-marche", "r-midi", "Marche de 20 min", null, 0.58),
 
-  { id: "t-lecture", routineId: "r-soir", momentId: null, name: "Lecture, 20 minutes", daysMask: null, atMinute: 1260, reliability: 0.83 },
-  { id: "t-sac", routineId: "r-soir", momentId: "m-soir", name: "Préparer le sac", daysMask: WEEKDAYS, atMinute: null, reliability: 0.69 },
-  { id: "t-coucher", routineId: "r-soir", momentId: null, name: "Au lit", daysMask: null, atMinute: 1380, reliability: 0.61 },
+  t("t-seance", "r-aprem", "Séance de sport", 1110, 0.79),
+  t("t-inbox", "r-aprem", "Inbox à zéro", 1050, 0.71),
 
-  // Tâches sans routine : à faire ce jour-là, sans moment particulier.
-  { id: "t-parents", routineId: null, momentId: null, name: "Appeler mes parents", daysMask: DIMANCHE, atMinute: null, reliability: 0.86 },
-  { id: "t-courses", routineId: null, momentId: null, name: "Courses de la semaine", daysMask: SAMEDI, atMinute: null, reliability: 0.9 },
+  t("t-sac", "r-soir", "Préparer le sac", null, 0.69, WEEKDAYS),
+  t("t-lecture", "r-soir", "Lecture, 20 minutes", 1260, 0.83),
+
+  t("t-coucher", "r-nuit", "Au lit", 1380, 0.61),
+
+  // Sans routine : à faire ce jour-là, sans heure ni bloc.
+  t("t-parents", null, "Appeler mes parents", null, 0.86, DIMANCHE),
+  t("t-courses", null, "Courses de la semaine", null, 0.9, SAMEDI),
+
+  // Directives : des règles à tenir, pas des tâches à exécuter.
+  t("d-cafeine", null, "Pas de caféine après 11 h 30", null, 0.68, ALL_DAYS, "directive"),
+  t("d-ecran", null, "Pas d'écran 30 min avant de dormir", null, 0.47, ALL_DAYS, "directive"),
 ];
 
 async function main() {
@@ -107,13 +116,11 @@ async function main() {
 
   console.log(`Seed de ${url} — historique du ${start} au ${today}`);
 
-  // Remise à zéro du jeu de démonstration uniquement (les cascades font le reste).
-  await db.delete(pushLog).where(eq(pushLog.userId, DEMO_USER_ID));
+  await db.delete(nudgeLog).where(eq(nudgeLog.userId, DEMO_USER_ID));
   await db.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, DEMO_USER_ID));
   await db.delete(completions).where(eq(completions.userId, DEMO_USER_ID));
   await db.delete(tasks).where(eq(tasks.userId, DEMO_USER_ID));
   await db.delete(routines).where(eq(routines.userId, DEMO_USER_ID));
-  await db.delete(dayMoments).where(eq(dayMoments.userId, DEMO_USER_ID));
   await db.delete(users).where(eq(users.id, DEMO_USER_ID));
 
   await db.insert(users).values({
@@ -122,15 +129,6 @@ async function main() {
     email: DEMO_USER_EMAIL,
     timeZone: "Europe/Paris",
   });
-
-  await db.insert(dayMoments).values(
-    moments.map((moment, index) => ({
-      ...moment,
-      userId: DEMO_USER_ID,
-      position: index,
-      updatedAt: now,
-    })),
-  );
 
   await db.insert(routines).values(
     demoRoutines.map((routine, index) => ({
@@ -146,11 +144,14 @@ async function main() {
       id: task.id,
       userId: DEMO_USER_ID,
       routineId: task.routineId,
-      momentId: task.momentId,
+      kind: task.kind,
       name: task.name,
       daysMask: task.daysMask,
       atMinute: task.atMinute,
       position: index,
+      // Les données de démonstration existent depuis le début de l'historique.
+      activeFrom: start,
+      activeUntil: null,
       updatedAt: now,
     })),
   );
@@ -187,8 +188,8 @@ async function main() {
 
   client.close();
   console.log(
-    `Seed terminé : ${moments.length} moments, ${demoRoutines.length} routines, ` +
-      `${demoTasks.length} tâches, ${rows.length} coches.`,
+    `Seed terminé : ${demoRoutines.length} routines, ${demoTasks.length} tâches ` +
+      `dont 2 directives, ${rows.length} coches.`,
   );
 }
 

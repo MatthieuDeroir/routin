@@ -29,28 +29,13 @@ const ownerColumn = {
 };
 
 /**
- * Moments de la journée, personnalisables par utilisateur.
- * Bornes exprimées en minutes depuis minuit local ; `endMinute` est exclusive.
- * Un moment de fin de journée se termine à 1440 (minuit).
- */
-export const dayMoments = sqliteTable(
-  "day_moment",
-  {
-    id: text("id").primaryKey(),
-    ...ownerColumn,
-    name: text("name").notNull(),
-    emoji: text("emoji"),
-    startMinute: integer("start_minute").notNull(),
-    endMinute: integer("end_minute").notNull(),
-    position: integer("position").notNull().default(0),
-    ...syncColumns,
-  },
-  (t) => [index("day_moment_user_idx").on(t.userId)],
-);
-
-/**
- * Groupe de tâches. `daysMask` est un bitmask 0–127 : bit 0 = lundi … bit 6 = dimanche.
- * Il sert de valeur par défaut aux tâches de la routine, qui peuvent la surcharger.
+ * Une routine est **à la fois** le groupe et le moment de la journée : « Matin »
+ * nomme le bloc et sa place dans la journée. Séparer les deux notions obligeait
+ * à créer un groupe puis à le rattacher à une tranche horaire, pour un résultat
+ * qui se recouvrait — une routine « Réveil » et un moment « Réveil ».
+ *
+ * `position` porte l'ordre de la journée ; `daysMask` est un bitmask 0–127
+ * (bit 0 = lundi) qui sert de valeur par défaut aux tâches de la routine.
  */
 export const routines = sqliteTable(
   "routine",
@@ -68,14 +53,18 @@ export const routines = sqliteTable(
 );
 
 /**
- * Tâche. Trois placements possibles dans la journée, par ordre de priorité :
- *   1. `atMinute` renseigné → heure précise ; le moment est *dérivé* des bornes
- *      de `dayMoments` au moment de l'affichage, jamais figé en base.
- *   2. `momentId` seul → dans ce moment, sans horaire.
- *   3. ni l'un ni l'autre → « dans la journée », sans moment.
+ * Une tâche appartient à une routine, ou à aucune — auquel cas elle est
+ * simplement « dans la journée ». Une heure précise ne fait que la trier en
+ * tête de son bloc ; elle ne change pas son appartenance.
+ *
+ * `kind` distingue deux natures :
+ *   - `task` — quelque chose à faire ;
+ *   - `directive` — une règle à tenir sur la journée entière (« pas de caféine
+ *     après 11 h 30 »). Une directive n'a ni routine ni heure : elle vaut pour
+ *     la journée, et se coche le soir comme tenue ou non.
  *
  * `daysMask` à NULL signifie « hérite de la routine ». Une tâche sans routine
- * (`routineId` NULL) doit donc porter son propre `daysMask`.
+ * doit donc porter son propre masque.
  */
 export const tasks = sqliteTable(
   "task",
@@ -85,14 +74,22 @@ export const tasks = sqliteTable(
     routineId: text("routine_id").references(() => routines.id, {
       onDelete: "cascade",
     }),
-    momentId: text("moment_id").references(() => dayMoments.id, {
-      onDelete: "set null",
-    }),
+    kind: text("kind", { enum: ["task", "directive"] })
+      .notNull()
+      .default("task"),
     name: text("name").notNull(),
     notes: text("notes"),
     daysMask: integer("days_mask"),
     atMinute: integer("at_minute"),
     position: integer("position").notNull().default(0),
+    /**
+     * Période de validité, en jours locaux. Créer une tâche aujourd'hui ne doit
+     * pas la faire apparaître dans les journées passées, et la retirer ne doit
+     * pas l'effacer de celles où elle a existé : sans ces bornes, l'historique
+     * et les séries se réécrivent à chaque modification.
+     */
+    activeFrom: text("active_from"),
+    activeUntil: text("active_until"),
     ...syncColumns,
   },
   (t) => [
@@ -141,26 +138,31 @@ export const pushSubscriptions = sqliteTable(
   (t) => [index("push_subscription_user_idx").on(t.userId)],
 );
 
-/** Trace des rappels déjà envoyés, pour ne pas notifier deux fois la même tâche. */
-export const pushLog = sqliteTable(
-  "push_log",
+/**
+ * Journal des relances envoyées.
+ *
+ * Les rappels ne sont plus attachés à une tâche et à son heure : ils sont
+ * déclenchés par l'état de la journée. Le journal sert donc à limiter la
+ * fréquence — au plus une relance par intention et par jour — plutôt qu'à
+ * dédoublonner par tâche.
+ */
+export const nudgeLog = sqliteTable(
+  "nudge_log",
   {
     id: text("id").primaryKey(),
     ...ownerColumn,
-    taskId: text("task_id")
-      .notNull()
-      .references(() => tasks.id, { onDelete: "cascade" }),
     day: text("day").notNull(),
+    /** Intention de la relance : démarrage, relance de milieu, clôture. */
+    reason: text("reason").notNull(),
     sentAt: integer("sent_at").notNull(),
   },
-  (t) => [uniqueIndex("push_log_task_day_idx").on(t.taskId, t.day)],
+  (t) => [
+    uniqueIndex("nudge_log_user_day_reason_idx").on(t.userId, t.day, t.reason),
+    index("nudge_log_user_idx").on(t.userId),
+  ],
 );
 
 export const routinesRelations = relations(routines, ({ many }) => ({
-  tasks: many(tasks),
-}));
-
-export const dayMomentsRelations = relations(dayMoments, ({ many }) => ({
   tasks: many(tasks),
 }));
 
@@ -168,10 +170,6 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   routine: one(routines, {
     fields: [tasks.routineId],
     references: [routines.id],
-  }),
-  moment: one(dayMoments, {
-    fields: [tasks.momentId],
-    references: [dayMoments.id],
   }),
   completions: many(completions),
 }));

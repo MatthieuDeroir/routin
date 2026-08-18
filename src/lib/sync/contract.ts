@@ -12,16 +12,6 @@ const syncFields = {
   deletedAt: z.number().int().positive().nullable(),
 };
 
-export const momentSchema = z.object({
-  id: z.string().min(1).max(64),
-  name: z.string().min(1).max(60),
-  emoji: z.string().max(8).nullable().optional(),
-  startMinute: z.number().int().min(0).max(1440),
-  endMinute: z.number().int().min(1).max(1440),
-  position: z.number().int().min(0).max(1000),
-  ...syncFields,
-});
-
 export const routineSchema = z.object({
   id: z.string().min(1).max(64),
   name: z.string().min(1).max(80),
@@ -35,12 +25,14 @@ export const routineSchema = z.object({
 export const taskSchema = z.object({
   id: z.string().min(1).max(64),
   routineId: z.string().min(1).max(64).nullable(),
-  momentId: z.string().min(1).max(64).nullable(),
+  kind: z.enum(["task", "directive"]),
   name: z.string().min(1).max(120),
   notes: z.string().max(2000).nullable().optional(),
   daysMask: z.number().int().min(0).max(127).nullable(),
   atMinute: z.number().int().min(0).max(1439).nullable(),
   position: z.number().int().min(0).max(10000),
+  activeFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  activeUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   ...syncFields,
 });
 
@@ -53,7 +45,6 @@ export const completionSchema = z.object({
 });
 
 export const mutationSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("moments"), payload: momentSchema }),
   z.object({ kind: z.literal("routines"), payload: routineSchema }),
   z.object({ kind: z.literal("tasks"), payload: taskSchema }),
   z.object({ kind: z.literal("completions"), payload: completionSchema }),
@@ -70,7 +61,6 @@ export type SyncRequest = z.infer<typeof syncRequestSchema>;
 export interface SyncResponse {
   cursor: number;
   changes: {
-    moments: z.infer<typeof momentSchema>[];
     routines: z.infer<typeof routineSchema>[];
     tasks: z.infer<typeof taskSchema>[];
     completions: z.infer<typeof completionSchema>[];
@@ -81,6 +71,6 @@ export interface SyncResponse {
 
 /**
  * Les entités doivent être écrites dans cet ordre : une tâche peut référencer
- * une routine et un moment créés dans le même envoi, une coche une tâche.
+ * une routine créée dans le même envoi, une coche une tâche.
  */
-export const KIND_ORDER = ["moments", "routines", "tasks", "completions"] as const;
+export const KIND_ORDER = ["routines", "tasks", "completions"] as const;

@@ -8,21 +8,25 @@ const LUNDI_MASK = maskFromWeekdays([0]);
 const quotidienne: Task = {
   id: "quot",
   routineId: null,
-  momentId: null,
+  kind: "task",
   name: "Lecture",
   daysMask: ALL_DAYS,
   atMinute: null,
   position: 0,
+  activeFrom: null,
+  activeUntil: null,
 };
 
 const hebdo: Task = {
   id: "hebdo",
   routineId: null,
-  momentId: null,
+  kind: "task",
   name: "Grand ménage",
   daysMask: LUNDI_MASK,
   atMinute: null,
   position: 0,
+  activeFrom: null,
+  activeUntil: null,
 };
 
 const done = (taskId: string, days: string[]): Completion[] =>

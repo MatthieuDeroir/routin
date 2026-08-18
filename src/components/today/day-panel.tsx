@@ -3,14 +3,19 @@
 import { Fragment } from "react";
 import {
   formatMinute,
+  locateNowMarker,
   type DaySchedule,
+  type NowMarker,
   type ScheduleSection,
 } from "@/lib/domain";
 import { cn } from "@/lib/utils";
+import type { Routine } from "@/lib/domain";
+import { QuickAdd } from "./quick-add";
 import { TaskRow } from "./task-row";
 
 interface DayPanelProps {
   schedule: DaySchedule;
+  routines: Routine[];
   /** Vrai tant que le cache local n'est pas lu : on n'annonce pas « rien de prévu ». */
   empty?: boolean;
   /** Minute courante, ou `null` si le jour affiché n'est pas aujourd'hui. */
@@ -21,6 +26,7 @@ interface DayPanelProps {
 
 export function DayPanel({
   schedule,
+  routines,
   empty,
   nowMinute,
   onToggle,
@@ -28,25 +34,37 @@ export function DayPanel({
 }: DayPanelProps) {
   if (empty) return null;
 
-  if (schedule.sections.length === 0) {
-    return (
-      <p className="text-muted-foreground border-[var(--rt-surface-border)] mx-1 rounded-[var(--radius)] border border-dashed px-4 py-10 text-center text-sm">
-        Rien de prévu ce jour-là.
-      </p>
-    );
-  }
+  // Le repère est calculé une fois pour la journée entière : il n'appartient
+  // pas à un bloc, il se glisse avant la prochaine tâche horodatée où qu'elle
+  // soit, et descend donc à mesure que l'heure avance.
+  const marker = locateNowMarker(schedule, nowMinute);
 
   return (
-    <div className="space-y-7">
+    <div>
+      {schedule.sections.length === 0 ? (
+        <p className="text-muted-foreground border-[var(--rt-surface-border)] mx-1 rounded-[var(--radius)] border border-dashed px-4 py-8 text-center text-sm">
+          Rien de prévu ce jour-là.
+        </p>
+      ) : null}
+
+      <div className="space-y-[var(--rt-section-gap)]">
       {schedule.sections.map((section) => (
         <Section
           key={section.key}
           section={section}
           nowMinute={nowMinute}
+          marker={marker?.sectionKey === section.key ? marker : null}
           onToggle={onToggle}
           disabled={disabled}
         />
       ))}
+      </div>
+
+      <QuickAdd
+        day={schedule.day}
+        routines={routines}
+        suggestedRoutineId={marker?.sectionKey ?? null}
+      />
     </div>
   );
 }
@@ -54,32 +72,16 @@ export function DayPanel({
 function Section({
   section,
   nowMinute,
+  marker,
   onToggle,
   disabled,
 }: {
   section: ScheduleSection;
   nowMinute: number | null;
+  marker: NowMarker | null;
   onToggle: (taskId: string, done: boolean) => void;
   disabled?: boolean;
 }) {
-  const moment = section.moment;
-  const isCurrent =
-    nowMinute !== null &&
-    moment !== null &&
-    nowMinute >= moment.startMinute &&
-    nowMinute < moment.endMinute;
-
-  // Le repère « maintenant » se glisse entre les tâches, juste après celles
-  // dont l'heure est passée : on voit d'un coup d'œil ce qui est en retard.
-  const markerIndex = isCurrent
-    ? section.entries.findIndex(
-        (entry) =>
-          entry.task.atMinute === null ||
-          entry.task.atMinute === undefined ||
-          entry.task.atMinute > (nowMinute as number),
-      )
-    : -1;
-
   return (
     <section>
       <header className="mb-2.5 flex items-baseline gap-2.5 px-1">
@@ -91,19 +93,13 @@ function Section({
             textTransform: "var(--rt-section-transform)" as never,
           }}
         >
-          {moment?.emoji ? (
+          {section.emoji ? (
             <span className="mr-1.5" aria-hidden>
-              {moment.emoji}
+              {section.emoji}
             </span>
           ) : null}
           {section.label}
         </h2>
-
-        {moment ? (
-          <span className="rt-num text-muted-foreground/70 text-[0.6875rem]">
-            {formatMinute(moment.startMinute)} – {formatMinute(moment.endMinute % 1440)}
-          </span>
-        ) : null}
 
         <span className="bg-[var(--rt-rail)] h-px flex-1" aria-hidden />
 
@@ -112,14 +108,14 @@ function Section({
         </span>
       </header>
 
-      <ul className="space-y-1.5">
+      <ul className="space-y-[var(--rt-list-gap)]">
         {section.entries.map((entry, index) => (
           <Fragment key={entry.task.id}>
-            {index === markerIndex ? <NowMarker minute={nowMinute as number} /> : null}
+            {marker?.index === index ? <NowMarker minute={nowMinute as number} /> : null}
             <TaskRow entry={entry} onToggle={onToggle} disabled={disabled} />
           </Fragment>
         ))}
-        {markerIndex === -1 && isCurrent ? (
+        {marker && marker.index >= section.entries.length ? (
           <NowMarker minute={nowMinute as number} />
         ) : null}
       </ul>

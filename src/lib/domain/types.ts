@@ -7,17 +7,10 @@ export type DaysMask = number;
 /** Index de jour de semaine, 0 = lundi … 6 = dimanche. */
 export type WeekdayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-export interface DayMoment {
-  id: string;
-  name: string;
-  emoji?: string | null;
-  /** Minutes depuis minuit, inclusif. */
-  startMinute: number;
-  /** Minutes depuis minuit, exclusif (1440 = minuit du lendemain). */
-  endMinute: number;
-  position: number;
-}
-
+/**
+ * Une routine est à la fois le groupe et le moment de la journée : « Matin »
+ * nomme le bloc et sa place. `position` porte l'ordre de la journée.
+ */
 export interface Routine {
   id: string;
   name: string;
@@ -27,17 +20,37 @@ export interface Routine {
   position: number;
 }
 
+/**
+ * Deux polarités, pas deux natures d'objet :
+ * `task` — ce qu'il FAUT faire, éventuellement à une heure précise ;
+ * `directive` — ce qu'il faut ÉVITER de faire sur la journée entière, sans
+ * routine ni heure, qu'on valide le soir comme tenu ou non.
+ */
+export type TaskKind = "task" | "directive";
+
 export interface Task {
   id: string;
+  /** `null` = la tâche est « dans la journée », sans routine. */
   routineId: string | null;
-  momentId: string | null;
+  kind: TaskKind;
   name: string;
   notes?: string | null;
   /** `null` = hérite de la routine. */
   daysMask: DaysMask | null;
-  /** Minutes depuis minuit, ou `null` si la tâche n'a pas d'heure précise. */
+  /** Minutes depuis minuit ; trie la tâche en tête de son bloc. */
   atMinute: number | null;
   position: number;
+
+  /**
+   * Période de validité de la tâche.
+   *
+   * Créer une tâche aujourd'hui ne doit pas la faire apparaître dans les
+   * journées passées, et la retirer ne doit pas l'effacer de celles où elle a
+   * réellement existé : l'historique et les séries seraient faux. `null` des
+   * deux côtés signifie « a toujours existé » et « existe toujours ».
+   */
+  activeFrom: DayString | null;
+  activeUntil: DayString | null;
 }
 
 export interface Completion {

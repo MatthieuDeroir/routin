@@ -9,9 +9,9 @@ Next.js (App Router) · Turso/libSQL + Drizzle · Auth.js v5 (Google) · Vercel.
 
 | Aspect | Décision |
 |---|---|
-| Modèle | Routines (groupes) contenant des tâches ; jours actifs surchargeables par tâche |
-| Horaire | Une tâche a **soit** une heure précise, **soit** un moment de la journée ; une heure précise est rangée dans le moment correspondant |
-| Moments | Personnalisables (nom + bornes horaires) dans les réglages |
+| Modèle | Une routine est à la fois le bloc et le moment de la journée ; jours actifs surchargeables par tâche |
+| Contenu | Tâche dans une routine · tâche sans routine (« dans la journée ») · directive (règle du jour) |
+| Horaire | Facultatif : une heure trie la tâche en tête de son bloc, sans changer son appartenance |
 | Tracking | Coche journalière · streaks & stats · heatmap calendrier |
 | Navigation | Vue « Aujourd'hui », swipe horizontal entre les jours |
 | Offline | Complet (lecture + écriture) : IndexedDB + file de mutations, LWW |
@@ -140,8 +140,18 @@ suivre est dans `vercel.ts`.
 l'auteur du commit n'est pas reconnu comme contributeur. `SECURITY.md` ne contient donc aucune
 adresse en clair et renvoie au signalement privé GitHub.
 
-**Six directions visuelles plutôt que trois.** Les cinq écartées sont conservées sous
-`/directions` ; seuls les caractères de « Brume » sont préchargés.
+**Six directions visuelles plutôt que trois.** Elles sont devenues des *thèmes* dans
+Réglages › Apparence, aux côtés de l'éclairage, de la couleur d'accent, de l'arrondi, de la
+densité et de la taille du texte. Seuls les caractères de « Brume » sont préchargés.
+
+**Le modèle a été simplifié après coup.** « Routine » et « moment de la journée » étaient deux
+concepts qui se recouvraient — au point que les données de démonstration comportaient une
+routine « Réveil » *et* un moment « Réveil ». Ils ont fusionné en un seul, ce qui a supprimé
+une table, les bornes horaires à régler et leur validation de couverture. Les directives sont
+apparues à la même occasion.
+
+**Les rappels sont déclenchés par l'état de la journée, pas par l'heure d'une tâche**, et
+rédigés par Mistral Small. La décision d'interrompre reste dans du code testé.
 
 ## 5. Secrets à fournir (checklist)
 

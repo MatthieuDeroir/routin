@@ -1,7 +1,7 @@
 import { and, eq, gt, lt } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { completions, dayMoments, routines, tasks } from "@/db/schema";
+import { completions, routines, tasks } from "@/db/schema";
 import { getUser } from "@/lib/session";
 import {
   KIND_ORDER,
@@ -50,9 +50,6 @@ export async function POST(request: Request) {
 
     try {
       switch (mutation.kind) {
-        case "moments":
-          await upsert(dayMoments, row, row.updatedAt);
-          break;
         case "routines":
           await upsert(routines, row, row.updatedAt);
           break;
@@ -72,11 +69,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const [momentRows, routineRows, taskRows, completionRows] = await Promise.all([
-    db
-      .select()
-      .from(dayMoments)
-      .where(and(eq(dayMoments.userId, user.id), gt(dayMoments.updatedAt, since))),
+  const [routineRows, taskRows, completionRows] = await Promise.all([
     db
       .select()
       .from(routines)
@@ -96,7 +89,6 @@ export async function POST(request: Request) {
   // sauter des modifications au moindre décalage d'horloge.
   const cursor = [
     since,
-    ...momentRows.map((r) => r.updatedAt),
     ...routineRows.map((r) => r.updatedAt),
     ...taskRows.map((r) => r.updatedAt),
     ...completionRows.map((r) => r.updatedAt),
@@ -106,7 +98,6 @@ export async function POST(request: Request) {
     cursor,
     rejected,
     changes: {
-      moments: momentRows.map(strip),
       routines: routineRows.map(strip),
       tasks: taskRows.map(strip),
       completions: completionRows.map(strip),
@@ -123,7 +114,7 @@ function strip<T extends { userId?: string }>(row: T) {
   return rest as Omit<T, "userId">;
 }
 
-type AnyTable = typeof dayMoments | typeof routines | typeof tasks | typeof completions;
+type AnyTable = typeof routines | typeof tasks | typeof completions;
 
 async function upsert(
   table: AnyTable,

@@ -6,13 +6,11 @@ import type {
   PendingMutation,
   Snapshot,
   StoredCompletion,
-  StoredMoment,
   StoredRoutine,
   StoredTask,
 } from "./types";
 
 interface RoutinDB extends DBSchema {
-  moments: { key: string; value: StoredMoment };
   routines: { key: string; value: StoredRoutine };
   tasks: { key: string; value: StoredTask };
   completions: { key: string; value: StoredCompletion };
@@ -21,14 +19,21 @@ interface RoutinDB extends DBSchema {
 }
 
 const DB_NAME = "routin";
-const DB_VERSION = 1;
+// La version 2 supprime la réserve « moments » : les routines portent
+// désormais elles-mêmes leur place dans la journée.
+const DB_VERSION = 2;
 
 let handle: Promise<IDBPDatabase<RoutinDB>> | null = null;
 
 function connect() {
   handle ??= openDB<RoutinDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      db.createObjectStore("moments", { keyPath: "id" });
+    upgrade(db, previousVersion) {
+      if (previousVersion > 0) {
+        // Rupture de modèle : le cache d'une version antérieure décrit un
+        // schéma qui n'existe plus, le reconstruire coûte moins cher que de
+        // le convertir.
+        for (const name of [...db.objectStoreNames]) db.deleteObjectStore(name);
+      }
       db.createObjectStore("routines", { keyPath: "id" });
       db.createObjectStore("tasks", { keyPath: "id" });
       db.createObjectStore("completions", { keyPath: "id" });
@@ -49,11 +54,10 @@ export async function ensureOwner(userId: string): Promise<boolean> {
   if (known === userId) return false;
 
   const tx = db.transaction(
-    ["moments", "routines", "tasks", "completions", "outbox", "meta"],
+    ["routines", "tasks", "completions", "outbox", "meta"],
     "readwrite",
   );
   await Promise.all([
-    tx.objectStore("moments").clear(),
     tx.objectStore("routines").clear(),
     tx.objectStore("tasks").clear(),
     tx.objectStore("completions").clear(),
@@ -67,29 +71,23 @@ export async function ensureOwner(userId: string): Promise<boolean> {
 
 export async function readSnapshot(): Promise<Snapshot> {
   const db = await connect();
-  const [moments, routines, tasks, completions] = await Promise.all([
-    db.getAll("moments"),
+  const [routines, tasks, completions] = await Promise.all([
     db.getAll("routines"),
     db.getAll("tasks"),
     db.getAll("completions"),
   ]);
-  return { moments, routines, tasks, completions };
+  return { routines, tasks, completions };
 }
 
 export async function writeSnapshot(snapshot: Snapshot): Promise<void> {
   const db = await connect();
-  const tx = db.transaction(
-    ["moments", "routines", "tasks", "completions"],
-    "readwrite",
-  );
+  const tx = db.transaction(["routines", "tasks", "completions"], "readwrite");
   const stores = {
-    moments: tx.objectStore("moments"),
     routines: tx.objectStore("routines"),
     tasks: tx.objectStore("tasks"),
     completions: tx.objectStore("completions"),
   };
   await Promise.all([
-    ...snapshot.moments.map((row) => stores.moments.put(row)),
     ...snapshot.routines.map((row) => stores.routines.put(row)),
     ...snapshot.tasks.map((row) => stores.tasks.put(row)),
     ...snapshot.completions.map((row) => stores.completions.put(row)),

@@ -1,5 +1,5 @@
-import { dayRange, weekdayOf } from "./days";
-import { isTaskActiveOnWeekday } from "./schedule";
+import { dayRange } from "./days";
+import { isTaskActiveOn } from "./schedule";
 import type { Completion, DayString, Routine, Task } from "./types";
 
 export interface TaskStats {
@@ -44,8 +44,10 @@ export function computeTaskStats({
       .map((completion) => completion.day),
   );
 
+  // La période de validité compte autant que les jours actifs : une tâche
+  // créée mardi n'a pas « manqué » les lundis précédents.
   const activeDays = dayRange(from, to).filter((day) =>
-    isTaskActiveOnWeekday(task, routine, weekdayOf(day)),
+    isTaskActiveOn(task, routine, day),
   );
 
   let best = 0;
@@ -117,12 +119,11 @@ export function buildHeatmap({
   }
 
   return dayRange(from, to).map((day) => {
-    const weekday = weekdayOf(day);
     const activeTasks = tasks.filter((task) =>
-      isTaskActiveOnWeekday(
+      isTaskActiveOn(
         task,
         task.routineId ? (routineById.get(task.routineId) ?? null) : null,
-        weekday,
+        day,
       ),
     );
     const doneSet = doneByDay.get(day);
