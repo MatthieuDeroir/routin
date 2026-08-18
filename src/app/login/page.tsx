@@ -3,6 +3,7 @@ import { signIn } from "@/auth";
 import { getUser } from "@/lib/session";
 import { isGoogleAuthConfigured } from "@/lib/env";
 import { Button } from "@/components/ui/button";
+import { Wordmark } from "@/components/wordmark";
 
 export const metadata = { title: "Connexion — Routin" };
 
@@ -11,8 +12,10 @@ export default async function LoginPage() {
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-8 px-6 py-16">
-      <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-semibold tracking-tight">Routin</h1>
+      <div className="space-y-3 text-center">
+        <h1 className="text-[2.75rem] leading-none">
+          <Wordmark />
+        </h1>
         <p className="text-muted-foreground text-sm">
           Vos routines, jour après jour.
         </p>
