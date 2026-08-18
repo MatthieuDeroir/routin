@@ -128,3 +128,272 @@
     @apply font-sans;
   }
 }
+/* ═══════════════════════════════════════════════════════════════════════════
+   Directions visuelles — trois partis pris commutables, le temps de trancher.
+   Chacune redéfinit les jetons shadcn plus quelques jetons propres à Routin
+   (préfixe --rt-), pour que les composants restent identiques d'une direction
+   à l'autre et que la comparaison porte sur le design, pas sur le code.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Cadran ───────────────────────────────────────────────────────────────
+   La journée lue comme un instrument de mesure : rail gradué, heures en
+   chiffres tabulaires, repère « maintenant » qui descend en temps réel.
+   Tout est calme et gris-bleu pour qu'une seule chose brille : l'heure qu'il est.
+   ------------------------------------------------------------------------ */
+[data-theme="cadran"] {
+  --background: #f5f7f9;
+  --foreground: #111621;
+  --card: #ffffff;
+  --card-foreground: #111621;
+  --popover: #ffffff;
+  --popover-foreground: #111621;
+  --primary: #24316d;
+  --primary-foreground: #ffffff;
+  --secondary: #e9edf3;
+  --secondary-foreground: #24316d;
+  --muted: #eceff4;
+  --muted-foreground: #59626f;
+  --accent: #e4e9f2;
+  --accent-foreground: #24316d;
+  --border: #dbe1e9;
+  --input: #dbe1e9;
+  --ring: #24316d;
+  --radius: 0.25rem;
+
+  --rt-signal: #c8761c;
+  --rt-signal-soft: #fbeedd;
+  --rt-rail: #dbe1e9;
+  --rt-surface: #ffffff;
+  --rt-surface-border: #e6eaf0;
+  --rt-shadow: 0 1px 2px rgb(17 22 33 / 0.05);
+  --rt-check-radius: 0.1875rem;
+  --rt-section-tracking: 0.16em;
+  --rt-section-transform: uppercase;
+  --rt-section-size: 0.6875rem;
+  --rt-font-display: var(--font-archivo), system-ui, sans-serif;
+  --rt-font-body: var(--font-plex-sans), system-ui, sans-serif;
+  --rt-font-num: var(--font-plex-mono), ui-monospace, monospace;
+  --rt-display-tracking: -0.03em;
+  --rt-display-weight: 700;
+  --rt-backdrop: none;
+  --rt-page-texture: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="cadran"] {
+    --background: #0b0e14;
+    --foreground: #e7ebf2;
+    --card: #131824;
+    --card-foreground: #e7ebf2;
+    --popover: #131824;
+    --popover-foreground: #e7ebf2;
+    --primary: #93a6ff;
+    --primary-foreground: #0b0e14;
+    --secondary: #1a2130;
+    --secondary-foreground: #e7ebf2;
+    --muted: #161c28;
+    --muted-foreground: #8a94a5;
+    --accent: #1a2130;
+    --accent-foreground: #e7ebf2;
+    --border: #222b3a;
+    --input: #222b3a;
+    --ring: #93a6ff;
+
+    --rt-signal: #eda94f;
+    --rt-signal-soft: #2b2013;
+    --rt-rail: #222b3a;
+    --rt-surface: #131824;
+    --rt-surface-border: #1e2634;
+    --rt-shadow: none;
+  }
+}
+
+/* ── Lumière ──────────────────────────────────────────────────────────────
+   Le fond EST l'heure qu'il est : la page prend la couleur du moment en cours,
+   de l'aube au coucher. Les sections ne sont pas des cartes mais des strates
+   de lumière, en verre dépoli. Pari assumé : la lisibilité doit tenir à chaque
+   palier, d'où des surfaces translucides mais toujours contrastées.
+   ------------------------------------------------------------------------ */
+[data-theme="lumiere"] {
+  --background: #e8eef5;
+  --foreground: #171d2b;
+  --card: rgb(255 255 255 / 0.66);
+  --card-foreground: #171d2b;
+  --popover: #ffffff;
+  --popover-foreground: #171d2b;
+  --primary: #2f4a6d;
+  --primary-foreground: #ffffff;
+  --secondary: rgb(255 255 255 / 0.5);
+  --secondary-foreground: #2f4a6d;
+  --muted: rgb(255 255 255 / 0.45);
+  --muted-foreground: #56617a;
+  --accent: rgb(255 255 255 / 0.7);
+  --accent-foreground: #2f4a6d;
+  --border: rgb(255 255 255 / 0.75);
+  --input: rgb(23 29 43 / 0.12);
+  --ring: #d08a3c;
+  --radius: 1.25rem;
+
+  --rt-signal: #c9762e;
+  --rt-signal-soft: rgb(201 118 46 / 0.14);
+  --rt-rail: rgb(23 29 43 / 0.1);
+  --rt-surface: rgb(255 255 255 / 0.62);
+  --rt-surface-border: rgb(255 255 255 / 0.8);
+  --rt-shadow: 0 8px 28px rgb(23 29 43 / 0.08);
+  --rt-check-radius: 999px;
+  --rt-section-tracking: 0.02em;
+  --rt-section-transform: none;
+  --rt-section-size: 0.9375rem;
+  --rt-font-display: var(--font-sora), system-ui, sans-serif;
+  --rt-font-body: var(--font-dm-sans), system-ui, sans-serif;
+  --rt-font-num: var(--font-dm-sans), system-ui, sans-serif;
+  --rt-display-tracking: -0.02em;
+  --rt-display-weight: 600;
+  --rt-backdrop: blur(16px) saturate(1.3);
+  --rt-page-texture: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="lumiere"] {
+    --background: #10141f;
+    --foreground: #e8ecf6;
+    --card: rgb(255 255 255 / 0.06);
+    --card-foreground: #e8ecf6;
+    --popover: #1a2030;
+    --popover-foreground: #e8ecf6;
+    --primary: #a9c6e8;
+    --primary-foreground: #10141f;
+    --secondary: rgb(255 255 255 / 0.08);
+    --secondary-foreground: #e8ecf6;
+    --muted: rgb(255 255 255 / 0.06);
+    --muted-foreground: #98a2b8;
+    --accent: rgb(255 255 255 / 0.1);
+    --accent-foreground: #e8ecf6;
+    --border: rgb(255 255 255 / 0.1);
+    --input: rgb(255 255 255 / 0.14);
+
+    --rt-signal: #e8a765;
+    --rt-signal-soft: rgb(232 167 101 / 0.16);
+    --rt-rail: rgb(255 255 255 / 0.12);
+    --rt-surface: rgb(255 255 255 / 0.06);
+    --rt-surface-border: rgb(255 255 255 / 0.1);
+    --rt-shadow: 0 8px 28px rgb(0 0 0 / 0.3);
+  }
+}
+
+/* ── Carnet ───────────────────────────────────────────────────────────────
+   Un carnet de suivi sur papier quadrillé : grille de points, coche tracée à
+   l'encre d'un trait qui se dessine, crayon rouge réservé au jour même.
+   Palette bleu-gris de papier millimétré, pas de crème ni de terre cuite.
+   ------------------------------------------------------------------------ */
+[data-theme="carnet"] {
+  --background: #edf1f3;
+  --foreground: #15222d;
+  --card: #fbfcfd;
+  --card-foreground: #15222d;
+  --popover: #fbfcfd;
+  --popover-foreground: #15222d;
+  --primary: #1b3a4b;
+  --primary-foreground: #fbfcfd;
+  --secondary: #e2e9ed;
+  --secondary-foreground: #1b3a4b;
+  --muted: #e6ecef;
+  --muted-foreground: #5c6d7a;
+  --accent: #dde6ea;
+  --accent-foreground: #1b3a4b;
+  --border: #ccd8de;
+  --input: #ccd8de;
+  --ring: #1b3a4b;
+  --radius: 0.125rem;
+
+  --rt-signal: #ad3f2d;
+  --rt-signal-soft: #f6e2de;
+  --rt-rail: #ccd8de;
+  --rt-surface: #fbfcfd;
+  --rt-surface-border: #d5dfe4;
+  --rt-shadow: none;
+  --rt-check-radius: 0.125rem;
+  --rt-section-tracking: 0.06em;
+  --rt-section-transform: none;
+  --rt-section-size: 0.875rem;
+  --rt-font-display: var(--font-bricolage), system-ui, sans-serif;
+  --rt-font-body: var(--font-karla), system-ui, sans-serif;
+  --rt-font-num: var(--font-plex-mono), ui-monospace, monospace;
+  --rt-display-tracking: -0.02em;
+  --rt-display-weight: 700;
+  --rt-backdrop: none;
+  --rt-page-texture: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--rt-rail) 85%, transparent) 1px,
+    transparent 0
+  );
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="carnet"] {
+    --background: #0f161b;
+    --foreground: #dde7ec;
+    --card: #151f27;
+    --card-foreground: #dde7ec;
+    --popover: #151f27;
+    --popover-foreground: #dde7ec;
+    --primary: #8fc0d4;
+    --primary-foreground: #0f161b;
+    --secondary: #1b262f;
+    --secondary-foreground: #dde7ec;
+    --muted: #18222a;
+    --muted-foreground: #8b9ba6;
+    --accent: #1b262f;
+    --accent-foreground: #dde7ec;
+    --border: #24323c;
+    --input: #24323c;
+    --ring: #8fc0d4;
+
+    --rt-signal: #d9614c;
+    --rt-signal-soft: #2c1a17;
+    --rt-rail: #24323c;
+    --rt-surface: #151f27;
+    --rt-surface-border: #1f2b34;
+  }
+}
+
+@layer base {
+  html[data-theme] body {
+    font-family: var(--rt-font-body);
+    background-image: var(--rt-page-texture);
+    background-size: 22px 22px;
+  }
+
+  html[data-theme] .rt-display {
+    font-family: var(--rt-font-display);
+    font-weight: var(--rt-display-weight);
+    letter-spacing: var(--rt-display-tracking);
+  }
+
+  html[data-theme] .rt-num {
+    font-family: var(--rt-font-num);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* La couche d'ambiance de « Lumière » bascule sur ses paliers nocturnes. */
+@media (prefers-color-scheme: dark) {
+  [data-ambient] {
+    background-image: linear-gradient(
+      175deg,
+      var(--sky-dark-a) 0%,
+      var(--sky-dark-b) 100%
+    ) !important;
+  }
+}

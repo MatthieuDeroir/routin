@@ -1,45 +1,53 @@
+import { cookies } from "next/headers";
 import { signOut } from "@/auth";
-import { Button } from "@/components/ui/button";
+import { ThemeSwitcher } from "@/components/theme-switcher";
+import { TodayView } from "@/components/today/today-view";
+import { addDays, today as todayIn } from "@/lib/domain";
+import { getRoutineData } from "@/lib/queries";
 import { requireUser } from "@/lib/session";
+import { THEME_COOKIE, resolveTheme } from "@/lib/theme";
 
-/**
- * Écran « Aujourd'hui » — coquille provisoire.
- * La vue réelle (sections par moment, swipe entre les jours) arrive au lot 5,
- * une fois la direction visuelle arrêtée.
- */
+/** Fenêtre de jours chargée d'avance, pour que la navigation reste locale. */
+const WINDOW_DAYS = 21;
+
 export default async function HomePage() {
   const user = await requireUser();
+  const theme = resolveTheme((await cookies()).get(THEME_COOKIE)?.value);
 
-  const today = new Intl.DateTimeFormat("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: user.timeZone,
-  }).format(new Date());
+  const today = todayIn(user.timeZone);
+  const data = await getRoutineData(
+    user.id,
+    addDays(today, -WINDOW_DAYS),
+    addDays(today, WINDOW_DAYS),
+  );
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-5 py-10">
-      <header className="space-y-1">
-        <p className="text-muted-foreground text-sm">Bonjour {user.name}</p>
-        <h1 className="text-2xl font-semibold tracking-tight first-letter:uppercase">
-          {today}
-        </h1>
-      </header>
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col">
+      <TodayView
+        theme={theme}
+        today={today}
+        timeZone={user.timeZone}
+        moments={data.moments}
+        routines={data.routines}
+        tasks={data.tasks}
+        completions={data.completions}
+      />
 
-      <div className="border-border text-muted-foreground rounded-xl border border-dashed p-6 text-sm">
-        Aucune routine pour l’instant. La vue du jour arrive au lot 5.
-      </div>
+      <ThemeSwitcher current={theme} />
 
       <form
-        className="mt-auto"
+        className="px-5 pb-6"
         action={async () => {
           "use server";
           await signOut({ redirectTo: "/login" });
         }}
       >
-        <Button type="submit" variant="ghost" size="sm">
+        <button
+          type="submit"
+          className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-4"
+        >
           Se déconnecter
-        </Button>
+        </button>
       </form>
     </main>
   );

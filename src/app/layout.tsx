@@ -1,28 +1,41 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import {
+  Archivo,
+  Bricolage_Grotesque,
+  DM_Sans,
+  IBM_Plex_Mono,
+  IBM_Plex_Sans,
+  Karla,
+  Sora,
+} from "next/font/google";
+import { cookies } from "next/headers";
 import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
+import { THEME_COOKIE, resolveTheme } from "@/lib/theme";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+/**
+ * Les trois directions visuelles ont chacune leur duo de caractères ; toutes
+ * sont chargées le temps de la comparaison, et deux jeux disparaîtront une
+ * fois la direction retenue.
+ */
+const archivo = Archivo({ variable: "--font-archivo", subsets: ["latin"], weight: ["600", "700"] });
+const plexSans = IBM_Plex_Sans({ variable: "--font-plex-sans", subsets: ["latin"], weight: ["400", "500", "600"] });
+const plexMono = IBM_Plex_Mono({ variable: "--font-plex-mono", subsets: ["latin"], weight: ["400", "500"] });
+const sora = Sora({ variable: "--font-sora", subsets: ["latin"], weight: ["500", "600"] });
+const dmSans = DM_Sans({ variable: "--font-dm-sans", subsets: ["latin"], weight: ["400", "500", "700"] });
+const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"], weight: ["600", "700"] });
+const karla = Karla({ variable: "--font-karla", subsets: ["latin"], weight: ["400", "500", "600"] });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const fontVariables = [archivo, plexSans, plexMono, sora, dmSans, bricolage, karla]
+  .map((font) => font.variable)
+  .join(" ");
 
 export const metadata: Metadata = {
   title: { default: "Routin", template: "%s — Routin" },
   description: "Vos routines quotidiennes, jour après jour.",
   applicationName: "Routin",
   manifest: "/manifest.webmanifest",
-  appleWebApp: {
-    capable: true,
-    title: "Routin",
-    statusBarStyle: "default",
-  },
+  appleWebApp: { capable: true, title: "Routin", statusBarStyle: "default" },
   formatDetection: { telephone: false },
 };
 
@@ -37,16 +50,19 @@ export const viewport: Viewport = {
   maximumScale: 5,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f7f9" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0e14" },
   ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const theme = resolveTheme((await cookies()).get(THEME_COOKIE)?.value);
+
   return (
     <html
       lang="fr"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      data-theme={theme}
+      className={`${fontVariables} h-full antialiased`}
     >
       <body className="bg-background text-foreground flex min-h-full flex-col overscroll-y-none">
         {children}
