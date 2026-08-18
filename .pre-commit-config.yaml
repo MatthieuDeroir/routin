@@ -1,0 +1,15 @@
+# Config pour le framework `pre-commit` (https://pre-commit.com/)
+# Installation : pip install pre-commit  (ou pipx install pre-commit)
+# Activation dans le repo : pre-commit install
+#
+# Un seul hook volontairement : gitleaks. Le but ici est d'empêcher un secret
+# d'entrer dans l'historique git, pas de dupliquer tout le pipeline CI en local
+# (ça, c'est le rôle des jobs SAST/SCA en CI — voir github-actions-security.yml
+# ou le template GitLab du skill audit-securite). Ajouter trop de hooks lourds
+# ici ralentit chaque commit et pousse les devs à faire `git commit --no-verify`.
+
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks

@@ -1,0 +1,19 @@
+# Mise à jour automatique des dépendances.
+# Écosystèmes du projet : npm (pnpm) + les actions GitHub du pipeline sécurité.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      # Regroupe les bumps mineurs/patch en une seule PR pour limiter le bruit
+      # sur un projet perso ; les majeures restent isolées pour être relues.
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

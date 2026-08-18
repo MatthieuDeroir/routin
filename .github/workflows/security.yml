@@ -1,0 +1,85 @@
+# =============================================================================
+# Workflow GitHub Actions de conformité sécurité — équivalent GitHub du
+# template GitLab CI du skill audit-securite (mêmes outils, même logique :
+# gitleaks / Semgrep / Trivy, 100% open-source, aucune app tierce payante).
+#
+# Fichier à placer dans .github/workflows/security.yml
+# Ajuste les versions d'actions (@vX) selon ce qui est à jour au moment du setup.
+# =============================================================================
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  SEC_SEVERITY_THRESHOLD: "CRITICAL,HIGH"
+
+jobs:
+  secret-detection:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # gitleaks a besoin de tout l'historique
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Semgrep
+        run: |
+          docker run --rm -v "$PWD:/src" semgrep/semgrep \
+            semgrep scan --config=auto --error --severity=ERROR /src
+
+  dependency-scanning:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: ${{ env.SEC_SEVERITY_THRESHOLD }}
+          exit-code: 1
+
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          format: cyclonedx
+          output: sbom.cdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.cdx.json
+          retention-days: 365   # traçabilité longue durée, cf. CRA
+
+  iac-scanning:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: ${{ env.SEC_SEVERITY_THRESHOLD }}
+          exit-code: 1
+
+  # Optionnel : scan de l'image conteneur si le projet en build une.
+  # container-scanning:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: aquasecurity/trivy-action@0.24.0
+  #       with:
+  #         scan-type: image
+  #         image-ref: <registry>/<image>:<tag>
+  #         severity: ${{ env.SEC_SEVERITY_THRESHOLD }}
+  #         exit-code: 1

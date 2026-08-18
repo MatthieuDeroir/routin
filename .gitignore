@@ -39,3 +39,32 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# --- Secrets & credentials — ne jamais committer ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+id_rsa
+id_ed25519
+id_ecdsa
+credentials.json
+*.credentials
+secrets.yml
+secrets.yaml
+.npmrc
+.pypirc
+*.kdbx
+
+# --- Base de données locale de développement ---
+local.db
+local.db-*
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+backups/
