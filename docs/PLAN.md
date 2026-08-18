@@ -106,23 +106,42 @@ Interaction UI
 
 ## 4. Découpage en lots
 
-| # | Lot | Contenu | Livrable vérifiable |
-|---|---|---|---|
-| 0 | Fondations repo | git init, `.gitignore`, hook anti-secrets, CI sécurité (skill `bootstrap-securite`), README | CI verte sur un commit vide |
-| 1 | Socle Next.js | App Router + TS strict, Tailwind, shadcn/ui, layout mobile, manifest + icônes + service worker (shell offline) | App installable, écran vide stylé |
-| 2 | Données | Drizzle + libSQL, schéma complet, migrations, seed de démo, script de backup pré-migration | `drizzle-kit push` + seed OK en local |
-| 3 | Auth | Auth.js v5 Google, adapter Drizzle, middleware de protection, page de login, sign-out | Login Google fonctionnel en local |
-| 4 | Direction visuelle | 3 maquettes proposées → 1 validée → tokens (couleurs, typo, rayons, densité) figés | Maquette validée par toi |
-| 5 | Vue jour | Sections par moment, tri horaire, swipe entre jours, coche animée, header date | Journée navigable avec données seed |
-| 6 | CRUD | Routines, tâches (jours actifs, heure ou moment), réorganisation, archivage ; réglages des moments | Création d'une routine complète de bout en bout |
-| 7 | Offline & sync | IndexedDB, file de mutations, `/api/sync`, indicateur d'état de synchro, résolution LWW | Mode avion : cocher, recharger, reconnecter → cohérent |
-| 8 | Stats | Streak courant / record, taux de complétion, heatmap 12 semaines | Écran stats sur historique seed |
-| 9 | Notifications | VAPID, abonnement, `/api/push/subscribe`, cron Vercel toutes les 5 min, dé-duplication | Push reçue sur mobile |
-| 10 | Qualité | Vitest sur récurrence, dérivation des moments, streaks, merge LWW ; lint + typecheck en CI | Suite verte en CI |
-| 11 | Production | Projet Vercel, DB Turso prod, variables d'env, OAuth Google prod, premier déploiement | URL en ligne, installée sur ton téléphone |
-| 12 | Skill | `~/.claude/skills/bootstrap-nextjs-turso/` extrait de ce projet | Skill rejouable sur un projet neuf |
+| # | Lot | État |
+|---|---|---|
+| 0 | Fondations dépôt — hook anti-secrets, CI sécurité, Dependabot, SECURITY.md | fait |
+| 1 | Socle Next.js 16, Tailwind 4, shadcn, manifest, icônes, service worker | fait |
+| 2 | Schéma Drizzle, migrations, backup avant migration, seed de démonstration | fait |
+| 3 | Auth.js v5 Google, sessions en base, `requireUser()` | fait |
+| 4 | Direction visuelle — six propositions, « Brume » retenue | fait |
+| 5 | Vue jour — sections par moment, swipe, bandeau de semaine, repère « maintenant » | fait |
+| 6 | Écrans de création — routines, tâches, moments | fait |
+| 7 | Local-first — IndexedDB, file de mutations, `/api/sync`, résolution LWW | fait |
+| 8 | Statistiques — séries, taux, heatmap douze semaines | fait |
+| 9 | Notifications — VAPID, abonnements, rappels programmés | fait |
+| 10 | Qualité — Vitest sur la logique métier, CI lint/typecheck/test | fait |
+| 11 | Production — Turso, Vercel, domaine, PWA installée | fait |
+| 12 | Skill `bootstrap-pwa-nextjs` extrait du projet | fait |
 
----
+## 4 bis. Écarts assumés par rapport au plan initial
+
+**Le magasin local est arrivé au lot 6, pas au lot 7.** Sans persistance, les écrans de
+création n'auraient servi qu'à regarder : impossible d'y saisir de vraies routines. La moitié
+cliente du lot 7 a donc été avancée, le lot 7 se réduisant à la file de sortie et à la route
+de synchronisation.
+
+**Les rappels ne passent pas par Vercel Cron.** Le plan Hobby limite les tâches planifiées à
+une par jour et refuse le déploiement à la création si la cadence est plus fine. Le
+déclencheur vit dans `.github/workflows/reminders.yml`, toutes les quinze minutes, avec
+`CRON_SECRET` partagé. L'endpoint reste idempotent, ce qui absorbe l'irrégularité du
+planificateur GitHub. Passer au plan Pro permettrait de revenir au cron natif — la marche à
+suivre est dans `vercel.ts`.
+
+**Le dépôt est public.** Le plan Hobby bloque les déploiements Git d'un dépôt privé quand
+l'auteur du commit n'est pas reconnu comme contributeur. `SECURITY.md` ne contient donc aucune
+adresse en clair et renvoie au signalement privé GitHub.
+
+**Six directions visuelles plutôt que trois.** Les cinq écartées sont conservées sous
+`/directions` ; seuls les caractères de « Brume » sont préchargés.
 
 ## 5. Secrets à fournir (checklist)
 
@@ -165,5 +184,5 @@ redirect URI OAuth à déclarer pour chaque environnement.
 - Résolution de conflits LWW : une modification simultanée sur deux appareils
   fait gagner la plus récente, sans fusion.
 - Pas de tests end-to-end (choix explicite) — la couverture repose sur les tests
-  unitaires de la logique métier.
+  unitaires de la logique métier (52 tests).
 - iOS n'accepte le Web Push que si la PWA est installée sur l'écran d'accueil.

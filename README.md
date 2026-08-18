@@ -4,7 +4,20 @@ PWA de gestion de routines quotidiennes, avec granularité par jour de la semain
 
 Next.js 16 (App Router) · Turso / libSQL + Drizzle · Auth.js v5 (Google) · Tailwind 4 + shadcn/ui · Vercel.
 
-Le plan de développement complet est dans [`docs/PLAN.md`](docs/PLAN.md).
+**Production :** https://routin-seven.vercel.app
+
+Le plan de développement et les écarts assumés sont dans [`docs/PLAN.md`](docs/PLAN.md).
+
+## Ce que fait l'application
+
+Des **routines** regroupent des **tâches**. Chaque routine porte des jours actifs par défaut,
+que chaque tâche peut surcharger. Une tâche se place dans la journée de trois façons, par
+ordre de priorité : une **heure précise** (le moment est alors dérivé des bornes), un **moment
+de la journée** sans horaire, ou rien du tout — elle est alors simplement à faire ce jour-là.
+Les moments eux-mêmes sont personnalisables.
+
+L'application est **local-first** : elle se lit et s'écrit hors ligne, et se réconcilie au
+retour du réseau (dernière écriture gagnante, ligne par ligne).
 
 ## Démarrage
 
@@ -38,6 +51,16 @@ Aucune valeur réelle ne doit être committée : `.env.local` est ignoré par gi
 un hook `gitleaks` bloque le commit en cas d'oubli, et la production passe par
 `vercel env`.
 
+## Écrans
+
+| Route | Rôle |
+| --- | --- |
+| `/` | La journée : sections par moment, balayage entre les jours |
+| `/routines` | Routines et tâches |
+| `/reglages` | Moments de la journée, activation des rappels |
+| `/stats` | Séries, taux de complétion, heatmap |
+| `/directions` | Directions visuelles écartées, conservées pour comparaison |
+
 ## Base de données
 
 ```bash
@@ -59,6 +82,18 @@ pnpm lint
 pnpm test
 ```
 
-Le pipeline `.github/workflows/security.yml` exécute à chaque push et PR :
-détection de secrets (gitleaks), SAST (Semgrep), analyse des dépendances et de
-la configuration (Trivy), et publie un SBOM CycloneDX.
+Deux pipelines à chaque push et PR :
+
+- `.github/workflows/ci.yml` — lint, vérification de types, tests ;
+- `.github/workflows/security.yml` — secrets (gitleaks), SAST (Semgrep),
+  dépendances et configuration (Trivy), SBOM CycloneDX.
+
+## Rappels
+
+`.github/workflows/reminders.yml` appelle `/api/cron/reminders` toutes les quinze
+minutes avec `CRON_SECRET`. Le plan Hobby de Vercel limitant les crons à une
+exécution par jour, le déclencheur ne peut pas vivre dans `vercel.ts` — la marche
+à suivre pour y revenir en plan Pro y est documentée.
+
+L'endpoint est idempotent : une seule notification par tâche et par jour, quel que
+soit le nombre d'appels.

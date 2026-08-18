@@ -31,3 +31,19 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   dans les Server Components et les routes API.
 - **Port de développement figé à 3002**, pour correspondre à l'URI de
   redirection OAuth déclarée chez Google.
+
+## Contraintes de l'outillage
+
+- **`pnpm typecheck` génère d'abord les types de routes.** `LayoutProps` et `PageProps`
+  viennent de `.next/types` : sans `next typegen`, la vérification échoue sur un dépôt
+  fraîchement cloné.
+- **Règles React 19 traitées en erreurs.** `setState` synchrone dans un effet et appel de
+  fonction impure pendant le rendu font échouer le lint. État dérivé d'une prop : ajuster
+  pendant le rendu. Système externe : `useSyncExternalStore`.
+- **La validation d'environnement est paresseuse.** Ne pas la remettre au niveau de l'import :
+  le `next build` échouerait dès la collecte des pages quand un secret d'exécution manque.
+- **Port de développement figé à 3002**, pour correspondre à l'URI de redirection OAuth.
+- **Plan Vercel Hobby** : un cron par jour maximum, et le déploiement est refusé *à la
+  création* si la cadence est plus fine. Le déclencheur des rappels vit dans GitHub Actions.
+- **Le magasin local démarre sur les données du serveur** puis fusionne IndexedDB : ne pas le
+  faire partir d'un instantané vide, le premier rendu serait blanc.
