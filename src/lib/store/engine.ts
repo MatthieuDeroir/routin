@@ -18,6 +18,7 @@ import type {
   EntityKind,
   Snapshot,
   StoredCompletion,
+  StoredPreference,
   StoredRoutine,
   StoredTask,
 } from "./types";
@@ -151,6 +152,18 @@ export class RoutinStore {
       ],
     };
     this.write("routines", [routine]);
+  }
+
+  upsertPreference(input: Omit<StoredPreference, "updatedAt">) {
+    const preference: StoredPreference = { ...input, updatedAt: Date.now() };
+    this.snapshot = {
+      ...this.snapshot,
+      preferences: [
+        ...this.snapshot.preferences.filter((item) => item.id !== preference.id),
+        preference,
+      ],
+    };
+    this.write("preferences", [preference]);
   }
 
   upsertTask(input: Omit<StoredTask, "updatedAt">) {
@@ -307,6 +320,7 @@ export class RoutinStore {
         routines: result.changes.routines as StoredRoutine[],
         tasks: result.changes.tasks as StoredTask[],
         completions: result.changes.completions as StoredCompletion[],
+        preferences: result.changes.preferences as StoredPreference[],
       });
       await writeSnapshot(this.snapshot);
 

@@ -112,17 +112,12 @@ export const APPEARANCE_COOKIE = "routin-apparence";
 const has = <T extends { id: string }>(list: readonly T[], value: unknown) =>
   list.some((item) => item.id === value);
 
-/** Tolérant par construction : un cookie corrompu retombe sur les défauts. */
-export function parseAppearance(raw: string | undefined | null): Appearance {
-  if (!raw) return DEFAULT_APPEARANCE;
-
-  let parsed: Partial<Appearance>;
-  try {
-    parsed = JSON.parse(decodeURIComponent(raw));
-  } catch {
-    return DEFAULT_APPEARANCE;
-  }
-
+/**
+ * Tolérante par construction : une valeur corrompue ou d'origine inconnue
+ * (cookie abîmé, ligne de préférence écrite par une version antérieure)
+ * retombe sur les défauts plutôt que de faire échouer tout le rendu.
+ */
+export function sanitizeAppearance(parsed: Partial<Appearance>): Appearance {
   const scale = Number(parsed.textScale);
 
   return {
@@ -143,6 +138,17 @@ export function parseAppearance(raw: string | undefined | null): Appearance {
       ? Math.min(TEXT_SCALE_MAX, Math.max(TEXT_SCALE_MIN, scale))
       : 1,
   };
+}
+
+/** Tolérant par construction : un cookie corrompu retombe sur les défauts. */
+export function parseAppearance(raw: string | undefined | null): Appearance {
+  if (!raw) return DEFAULT_APPEARANCE;
+
+  try {
+    return sanitizeAppearance(JSON.parse(decodeURIComponent(raw)));
+  } catch {
+    return DEFAULT_APPEARANCE;
+  }
 }
 
 export function serializeAppearance(appearance: Appearance): string {

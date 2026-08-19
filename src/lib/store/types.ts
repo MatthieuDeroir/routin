@@ -1,3 +1,4 @@
+import type { Appearance } from "@/lib/appearance";
 import type { Completion, Routine, Task } from "@/lib/domain";
 
 /**
@@ -14,14 +15,17 @@ export interface SyncFields {
 export type StoredRoutine = Routine & SyncFields;
 export type StoredTask = Task & SyncFields;
 export type StoredCompletion = Completion & { id: string; updatedAt: number };
+/** Une ligne par utilisateur : `id` vaut l'identifiant utilisateur lui-même. */
+export type StoredPreference = Appearance & { id: string } & SyncFields;
 
 export interface Snapshot {
   routines: StoredRoutine[];
   tasks: StoredTask[];
   completions: StoredCompletion[];
+  preferences: StoredPreference[];
 }
 
-export type EntityKind = "routines" | "tasks" | "completions";
+export type EntityKind = "routines" | "tasks" | "completions" | "preferences";
 
 /**
  * Une mutation en attente d'envoi au serveur. Elle porte l'entité complète

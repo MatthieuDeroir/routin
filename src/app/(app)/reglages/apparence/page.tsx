@@ -1,17 +1,18 @@
-import { cookies } from "next/headers";
 import { PageHeader } from "@/components/page-header";
 import { AppearanceEditor } from "@/components/settings/appearance-editor";
-import { APPEARANCE_COOKIE, parseAppearance } from "@/lib/appearance";
+import { resolveAppearance } from "@/lib/appearance-server";
+import { requireUser } from "@/lib/session";
 
 export const metadata = { title: "Apparence" };
 
 export default async function AppearancePage() {
-  const appearance = parseAppearance((await cookies()).get(APPEARANCE_COOKIE)?.value);
+  const user = await requireUser();
+  const appearance = await resolveAppearance();
 
   return (
     <>
       <PageHeader title="Apparence" back="/reglages" />
-      <AppearanceEditor initial={appearance} />
+      <AppearanceEditor initial={appearance} userId={user.id} />
     </>
   );
 }

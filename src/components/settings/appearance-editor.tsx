@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   ACCENTS,
@@ -16,6 +16,7 @@ import {
   serializeAppearance,
   type Appearance,
 } from "@/lib/appearance";
+import { useStore } from "@/lib/store/store";
 import { cn } from "@/lib/utils";
 
 /**
@@ -27,8 +28,15 @@ import { cn } from "@/lib/utils";
  * vérifier. Un échantillon de liste reste affiché ici pour juger la densité et
  * l'arrondi sans quitter la page.
  */
-export function AppearanceEditor({ initial }: { initial: Appearance }) {
+export function AppearanceEditor({
+  initial,
+  userId,
+}: {
+  initial: Appearance;
+  userId: string;
+}) {
   const [appearance, setAppearance] = useState(initial);
+  const { upsertPreference } = useStore();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -42,8 +50,28 @@ export function AppearanceEditor({ initial }: { initial: Appearance }) {
     }
     root.style.setProperty("--rt-text-scale", String(appearance.textScale));
 
+    // Cache local instantané, pour ce navigateur : évite un flash de thème au
+    // prochain chargement sans attendre l'aller-retour réseau.
     document.cookie = `${APPEARANCE_COOKIE}=${serializeAppearance(appearance)}; path=/; max-age=31536000; samesite=lax`;
   }, [appearance]);
+
+  // La persistance entre appareils est débattue légèrement : un curseur (la
+  // taille du texte) déclenche ce changement à chaque cran glissé, et envoyer
+  // une synchro par cran serait pur gaspillage. Le premier rendu est ignoré :
+  // ouvrir la page sans rien changer n'a pas à réémettre ce qui est déjà là.
+  const persistTimer = useRef<number | undefined>(undefined);
+  const skipFirst = useRef(true);
+  useEffect(() => {
+    if (skipFirst.current) {
+      skipFirst.current = false;
+      return;
+    }
+    window.clearTimeout(persistTimer.current);
+    persistTimer.current = window.setTimeout(() => {
+      upsertPreference({ id: userId, ...appearance, deletedAt: null });
+    }, 400);
+    return () => window.clearTimeout(persistTimer.current);
+  }, [appearance, userId, upsertPreference]);
 
   const set = <K extends keyof Appearance>(key: K, value: Appearance[K]) =>
     setAppearance((current) => ({ ...current, [key]: value }));

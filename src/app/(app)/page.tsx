@@ -1,13 +1,12 @@
-import { cookies } from "next/headers";
 import { AppMenu } from "@/components/app-menu";
 import { TodayView } from "@/components/today/today-view";
 import { today as todayIn } from "@/lib/domain";
 import { requireUser } from "@/lib/session";
-import { APPEARANCE_COOKIE, parseAppearance } from "@/lib/appearance";
+import { resolveAppearance } from "@/lib/appearance-server";
 
 export default async function HomePage() {
   const user = await requireUser();
-  const appearance = parseAppearance((await cookies()).get(APPEARANCE_COOKIE)?.value);
+  const appearance = await resolveAppearance();
 
   return (
     <TodayView

@@ -6,6 +6,7 @@ import type {
   PendingMutation,
   Snapshot,
   StoredCompletion,
+  StoredPreference,
   StoredRoutine,
   StoredTask,
 } from "./types";
@@ -14,14 +15,15 @@ interface RoutinDB extends DBSchema {
   routines: { key: string; value: StoredRoutine };
   tasks: { key: string; value: StoredTask };
   completions: { key: string; value: StoredCompletion };
+  preferences: { key: string; value: StoredPreference };
   outbox: { key: string; value: PendingMutation };
   meta: { key: string; value: unknown };
 }
 
 const DB_NAME = "routin";
-// La version 2 supprime la réserve « moments » : les routines portent
-// désormais elles-mêmes leur place dans la journée.
-const DB_VERSION = 2;
+// La version 3 ajoute les préférences d'apparence, synchronisées comme le
+// reste plutôt que posées dans un cookie seul.
+const DB_VERSION = 3;
 
 let handle: Promise<IDBPDatabase<RoutinDB>> | null = null;
 
@@ -37,6 +39,7 @@ function connect() {
       db.createObjectStore("routines", { keyPath: "id" });
       db.createObjectStore("tasks", { keyPath: "id" });
       db.createObjectStore("completions", { keyPath: "id" });
+      db.createObjectStore("preferences", { keyPath: "id" });
       db.createObjectStore("outbox", { keyPath: "key" });
       db.createObjectStore("meta");
     },
@@ -54,13 +57,14 @@ export async function ensureOwner(userId: string): Promise<boolean> {
   if (known === userId) return false;
 
   const tx = db.transaction(
-    ["routines", "tasks", "completions", "outbox", "meta"],
+    ["routines", "tasks", "completions", "preferences", "outbox", "meta"],
     "readwrite",
   );
   await Promise.all([
     tx.objectStore("routines").clear(),
     tx.objectStore("tasks").clear(),
     tx.objectStore("completions").clear(),
+    tx.objectStore("preferences").clear(),
     tx.objectStore("outbox").clear(),
   ]);
   await tx.objectStore("meta").put(userId, "userId");
@@ -71,26 +75,32 @@ export async function ensureOwner(userId: string): Promise<boolean> {
 
 export async function readSnapshot(): Promise<Snapshot> {
   const db = await connect();
-  const [routines, tasks, completions] = await Promise.all([
+  const [routines, tasks, completions, preferences] = await Promise.all([
     db.getAll("routines"),
     db.getAll("tasks"),
     db.getAll("completions"),
+    db.getAll("preferences"),
   ]);
-  return { routines, tasks, completions };
+  return { routines, tasks, completions, preferences };
 }
 
 export async function writeSnapshot(snapshot: Snapshot): Promise<void> {
   const db = await connect();
-  const tx = db.transaction(["routines", "tasks", "completions"], "readwrite");
+  const tx = db.transaction(
+    ["routines", "tasks", "completions", "preferences"],
+    "readwrite",
+  );
   const stores = {
     routines: tx.objectStore("routines"),
     tasks: tx.objectStore("tasks"),
     completions: tx.objectStore("completions"),
+    preferences: tx.objectStore("preferences"),
   };
   await Promise.all([
     ...snapshot.routines.map((row) => stores.routines.put(row)),
     ...snapshot.tasks.map((row) => stores.tasks.put(row)),
     ...snapshot.completions.map((row) => stores.completions.put(row)),
+    ...snapshot.preferences.map((row) => stores.preferences.put(row)),
   ]);
   await tx.done;
 }

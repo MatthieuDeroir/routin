@@ -1,14 +1,14 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { PageHeader } from "@/components/page-header";
-import { APPEARANCE_COOKIE, THEMES, parseAppearance } from "@/lib/appearance";
+import { THEMES } from "@/lib/appearance";
+import { resolveAppearance } from "@/lib/appearance-server";
 import { requireUser } from "@/lib/session";
 
 export const metadata = { title: "Réglages" };
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const appearance = parseAppearance((await cookies()).get(APPEARANCE_COOKIE)?.value);
+  const appearance = await resolveAppearance();
   const theme = THEMES.find((item) => item.id === appearance.theme);
 
   const entries = [

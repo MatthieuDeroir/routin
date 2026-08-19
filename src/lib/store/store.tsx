@@ -29,6 +29,7 @@ export function useStore() {
     upsertRoutine: store.upsertRoutine.bind(store),
     removeRoutine: store.removeRoutine.bind(store),
     upsertTask: store.upsertTask.bind(store),
+    upsertPreference: store.upsertPreference.bind(store),
     endTask: store.endTask.bind(store),
     setCompletion: store.setCompletion.bind(store),
     flush: store.flush.bind(store),

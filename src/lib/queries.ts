@@ -1,7 +1,7 @@
 import "server-only";
 import { and, between, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { completions, routines, tasks } from "@/db/schema";
+import { completions, preferences, routines, tasks } from "@/db/schema";
 import type { DayString } from "@/lib/domain";
 import type { Snapshot } from "@/lib/store/types";
 
@@ -16,7 +16,7 @@ export async function getRoutineData(
   fromDay: DayString,
   toDay: DayString,
 ): Promise<Snapshot> {
-  const [routineRows, taskRows, completionRows] = await Promise.all([
+  const [routineRows, taskRows, completionRows, preferenceRows] = await Promise.all([
     db
       .select()
       .from(routines)
@@ -34,6 +34,7 @@ export async function getRoutineData(
           between(completions.day, fromDay, toDay),
         ),
       ),
+    db.select().from(preferences).where(eq(preferences.userId, userId)),
   ]);
 
   return {
@@ -70,5 +71,16 @@ export async function getRoutineData(
       done: row.done,
       updatedAt: row.updatedAt,
     })),
+    preferences: preferenceRows.map((row) => ({
+      id: row.id,
+      theme: row.theme,
+      scheme: row.scheme,
+      accent: row.accent,
+      radius: row.radius,
+      density: row.density,
+      textScale: row.textScale,
+      updatedAt: row.updatedAt,
+      deletedAt: row.deletedAt,
+    })) as Snapshot["preferences"],
   };
 }

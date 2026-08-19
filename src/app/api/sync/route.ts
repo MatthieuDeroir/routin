@@ -1,7 +1,7 @@
 import { and, eq, gt, lt } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { completions, routines, tasks } from "@/db/schema";
+import { completions, preferences, routines, tasks } from "@/db/schema";
 import { getUser } from "@/lib/session";
 import {
   KIND_ORDER,
@@ -63,6 +63,9 @@ export async function POST(request: Request) {
         case "completions":
           await upsert(completions, row, row.updatedAt);
           break;
+        case "preferences":
+          await upsert(preferences, row, row.updatedAt);
+          break;
       }
     } catch (error) {
       // Journalisé côté serveur : un rejet est retiré de la file cliente sans
@@ -76,7 +79,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const [routineRows, taskRows, completionRows] = await Promise.all([
+  const [routineRows, taskRows, completionRows, preferenceRows] = await Promise.all([
     db
       .select()
       .from(routines)
@@ -89,6 +92,10 @@ export async function POST(request: Request) {
       .select()
       .from(completions)
       .where(and(eq(completions.userId, user.id), gt(completions.updatedAt, since))),
+    db
+      .select()
+      .from(preferences)
+      .where(and(eq(preferences.userId, user.id), gt(preferences.updatedAt, since))),
   ]);
 
   // Le curseur suit les horodatages réellement stockés, pas l'heure du serveur :
@@ -99,6 +106,7 @@ export async function POST(request: Request) {
     ...routineRows.map((r) => r.updatedAt),
     ...taskRows.map((r) => r.updatedAt),
     ...completionRows.map((r) => r.updatedAt),
+    ...preferenceRows.map((r) => r.updatedAt),
   ].reduce((max, value) => (value > max ? value : max), since);
 
   const response: SyncResponse = {
@@ -108,6 +116,7 @@ export async function POST(request: Request) {
       routines: routineRows.map(strip),
       tasks: taskRows.map(strip),
       completions: completionRows.map(strip),
+      preferences: preferenceRows.map(strip),
     },
   };
 
@@ -121,7 +130,7 @@ function strip<T extends { userId?: string }>(row: T) {
   return rest as Omit<T, "userId">;
 }
 
-type AnyTable = typeof routines | typeof tasks | typeof completions;
+type AnyTable = typeof routines | typeof tasks | typeof completions | typeof preferences;
 
 async function upsert(
   table: AnyTable,

@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
   index,
   integer,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -128,6 +129,27 @@ export const completions = sqliteTable(
     index("completion_user_day_idx").on(t.userId, t.day),
   ],
 );
+
+/**
+ * Préférences d'apparence, une ligne par utilisateur (`id` = `user_id`).
+ *
+ * Synchronisées comme le reste des données métier plutôt que posées dans un
+ * cookie seul : un cookie ne vaut que pour ce navigateur, et le réglage
+ * choisi sur un appareil doit se retrouver sur les autres. Le cookie reste
+ * la copie rapide qui évite un flash de thème au premier rendu ; cette table
+ * est la source de vérité entre appareils.
+ */
+export const preferences = sqliteTable("preference", {
+  id: text("id").primaryKey(),
+  ...ownerColumn,
+  theme: text("theme").notNull().default("brume"),
+  scheme: text("scheme").notNull().default("system"),
+  accent: text("accent"),
+  radius: text("radius"),
+  density: text("density").notNull().default("normal"),
+  textScale: real("text_scale").notNull().default(1),
+  ...syncColumns,
+});
 
 /** Abonnements Web Push, un par navigateur/appareil. */
 export const pushSubscriptions = sqliteTable(

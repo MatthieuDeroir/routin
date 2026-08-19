@@ -50,10 +50,28 @@ export const completionSchema = z.object({
   updatedAt: z.number().int().positive(),
 });
 
+/**
+ * Une ligne par utilisateur : `id` vaut l'identifiant utilisateur. Les valeurs
+ * énumérées (thème, accent…) ne sont pas contraintes à la liste connue côté
+ * serveur : un thème ajouté par une version cliente plus récente doit pouvoir
+ * remonter sans être rejeté, la tolérance vit côté lecture (`sanitizeAppearance`).
+ */
+export const preferenceSchema = z.object({
+  id: z.string().min(1).max(64),
+  theme: z.string().min(1).max(32),
+  scheme: z.string().min(1).max(16),
+  accent: z.string().max(32).nullable(),
+  radius: z.string().max(32).nullable(),
+  density: z.string().min(1).max(16),
+  textScale: z.number().min(0.5).max(2),
+  ...syncFields,
+});
+
 export const mutationSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("routines"), payload: routineSchema }),
   z.object({ kind: z.literal("tasks"), payload: taskSchema }),
   z.object({ kind: z.literal("completions"), payload: completionSchema }),
+  z.object({ kind: z.literal("preferences"), payload: preferenceSchema }),
 ]);
 
 export const syncRequestSchema = z.object({
@@ -70,6 +88,7 @@ export interface SyncResponse {
     routines: z.infer<typeof routineSchema>[];
     tasks: z.infer<typeof taskSchema>[];
     completions: z.infer<typeof completionSchema>[];
+    preferences: z.infer<typeof preferenceSchema>[];
   };
   /** Mutations refusées, avec leur motif : le client peut les purger. */
   rejected: { id: string; kind: string; reason: string }[];
@@ -77,6 +96,7 @@ export interface SyncResponse {
 
 /**
  * Les entités doivent être écrites dans cet ordre : une tâche peut référencer
- * une routine créée dans le même envoi, une coche une tâche.
+ * une routine créée dans le même envoi, une coche une tâche. Les préférences
+ * n'ont aucune dépendance, leur place dans l'ordre est indifférente.
  */
-export const KIND_ORDER = ["routines", "tasks", "completions"] as const;
+export const KIND_ORDER = ["routines", "tasks", "completions", "preferences"] as const;

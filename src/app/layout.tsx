@@ -8,15 +8,9 @@ import {
   Karla,
   Sora,
 } from "next/font/google";
-import { cookies } from "next/headers";
 import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
-import {
-  APPEARANCE_COOKIE,
-  appearanceAttributes,
-  appearanceStyle,
-  parseAppearance,
-  themeColor,
-} from "@/lib/appearance";
+import { appearanceAttributes, appearanceStyle, themeColor } from "@/lib/appearance";
+import { resolveAppearance } from "@/lib/appearance-server";
 import "./globals.css";
 
 /**
@@ -56,9 +50,7 @@ export const metadata: Metadata = {
  * une barre système figée sur une autre palette se voit immédiatement.
  */
 export async function generateViewport(): Promise<Viewport> {
-  const appearance = parseAppearance(
-    (await cookies()).get(APPEARANCE_COOKIE)?.value,
-  );
+  const appearance = await resolveAppearance();
 
   return {
     width: "device-width",
@@ -70,9 +62,7 @@ export async function generateViewport(): Promise<Viewport> {
 }
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const appearance = parseAppearance(
-    (await cookies()).get(APPEARANCE_COOKIE)?.value,
-  );
+  const appearance = await resolveAppearance();
 
   return (
     <html

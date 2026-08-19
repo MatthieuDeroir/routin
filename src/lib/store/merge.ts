@@ -31,6 +31,7 @@ export function mergeSnapshots(local: Snapshot, incoming: Snapshot): Snapshot {
     routines: mergeRows(local.routines, incoming.routines),
     tasks: mergeRows(local.tasks, incoming.tasks),
     completions: mergeRows(local.completions, incoming.completions),
+    preferences: mergeRows(local.preferences, incoming.preferences),
   };
 }
 
@@ -43,6 +44,7 @@ export function visible(snapshot: Snapshot): Snapshot {
     routines: alive(snapshot.routines),
     tasks: alive(snapshot.tasks),
     completions: snapshot.completions,
+    preferences: snapshot.preferences,
   };
 }
 
@@ -50,4 +52,5 @@ export const emptySnapshot = (): Snapshot => ({
   routines: [],
   tasks: [],
   completions: [],
+  preferences: [],
 });
