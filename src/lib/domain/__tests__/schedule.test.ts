@@ -187,6 +187,84 @@ describe("locateNowMarker", () => {
   });
 });
 
+describe("locateNowMarker avec créneaux horaires", () => {
+  const windowed = (
+    id: string,
+    position: number,
+    startMinute: number,
+    endMinute: number,
+  ): Routine => ({ id, name: id, daysMask: ALL_DAYS, position, startMinute, endMinute });
+
+  const matin = windowed("matin", 0, 8 * 60, 12 * 60);
+  const apresMidi = windowed("apres-midi", 1, 14 * 60, 19 * 60);
+  const soir = windowed("soir", 2, 19 * 60, 24 * 60);
+
+  it("se pose dans le bloc dont le créneau contient l'heure actuelle, même sans tâche horodatée dedans", () => {
+    // Seule tâche horodatée de la journée : à 19 h, dans « Soir ». Il est 9 h.
+    const tasks = [
+      task({ id: "medicament", name: "Médicament", routineId: "soir", atMinute: 19 * 60 }),
+      task({ id: "etirements", name: "Étirements", routineId: "matin" }),
+    ];
+    const schedule = buildDaySchedule({
+      day: LUNDI,
+      routines: [matin, apresMidi, soir],
+      tasks,
+      completions: [],
+    });
+    // Avant, la barre se serait posée devant « Médicament » dans Soir dès le matin.
+    expect(locateNowMarker(schedule, 9 * 60)).toEqual({ sectionKey: "matin", index: 0 });
+  });
+
+  it("s'arrête toujours avant la prochaine tâche horodatée de son propre bloc", () => {
+    const tasks = [
+      task({ id: "eau", name: "Eau", routineId: "matin", atMinute: 9 * 60 }),
+      task({ id: "sport", name: "Sport", routineId: "matin", atMinute: 10 * 60 }),
+    ];
+    const schedule = buildDaySchedule({
+      day: LUNDI,
+      routines: [matin, apresMidi, soir],
+      tasks,
+      completions: [],
+    });
+    expect(locateNowMarker(schedule, 9 * 60 + 30)).toEqual({ sectionKey: "matin", index: 1 });
+  });
+
+  it("s'accroche au dernier créneau entamé quand le bloc actif n'a rien aujourd'hui", () => {
+    // « Après-midi » (14 h-19 h) est actif à 15 h mais n'a aucune tâche : pas de section.
+    const tasks = [task({ id: "medicament", name: "Médicament", routineId: "soir" })];
+    const schedule = buildDaySchedule({
+      day: LUNDI,
+      routines: [matin, apresMidi, soir],
+      tasks,
+      completions: [],
+    });
+    expect(locateNowMarker(schedule, 15 * 60)).toEqual({ sectionKey: "soir", index: 0 });
+  });
+
+  it("annonce le prochain créneau quand aucun n'est encore entamé", () => {
+    const tasks = [task({ id: "medicament", name: "Médicament", routineId: "soir" })];
+    const schedule = buildDaySchedule({
+      day: LUNDI,
+      routines: [apresMidi, soir],
+      tasks,
+      completions: [],
+    });
+    expect(locateNowMarker(schedule, 6 * 60)).toEqual({ sectionKey: "soir", index: 0 });
+  });
+
+  it("retombe sur l'ancrage par tâche horodatée si aucune routine affichée n'a de créneau", () => {
+    const sansCreneau = routine("libre", "Libre", 0);
+    const tasks = [task({ id: "lecture", name: "Lecture", routineId: "libre", atMinute: 20 * 60 })];
+    const schedule = buildDaySchedule({
+      day: LUNDI,
+      routines: [sansCreneau],
+      tasks,
+      completions: [],
+    });
+    expect(locateNowMarker(schedule, 9 * 60)).toEqual({ sectionKey: "libre", index: 0 });
+  });
+});
+
 describe("période de validité", () => {
   const bloc: Routine = { id: "r", name: "Matin", daysMask: ALL_DAYS, position: 0 };
 

@@ -19,6 +19,10 @@ export const routineSchema = z.object({
   color: z.string().max(32).nullable().optional(),
   daysMask: z.number().int().min(0).max(127),
   position: z.number().int().min(0).max(1000),
+  // Tolérant à l'absence : une routine encore en cache dans un navigateur
+  // d'avant l'introduction du créneau doit pouvoir remonter, pas être rejetée.
+  startMinute: z.number().int().min(0).max(1439).nullable().optional(),
+  endMinute: z.number().int().min(0).max(1440).nullable().optional(),
   ...syncFields,
 });
 

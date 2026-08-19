@@ -44,6 +44,8 @@ export async function getRoutineData(
       color: row.color,
       daysMask: row.daysMask,
       position: row.position,
+      startMinute: row.startMinute,
+      endMinute: row.endMinute,
       updatedAt: row.updatedAt,
       deletedAt: row.deletedAt,
     })),

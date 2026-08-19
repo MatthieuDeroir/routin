@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FormActions, TextInput } from "@/components/ui/field";
-import { ALL_DAYS } from "@/lib/domain";
+import { ALL_DAYS, minutesToTimeInput, timeInputToMinutes } from "@/lib/domain";
 import { useStore } from "@/lib/store/store";
 import { cn } from "@/lib/utils";
 import { DaysPicker, DaysShortcuts } from "./days-picker";
@@ -29,6 +29,11 @@ export function RoutineEditor({ id }: { id: string }) {
   const [emoji, setEmoji] = useState(existing?.emoji ?? "");
   const [color, setColor] = useState(existing?.color ?? COLORS[0]);
   const [daysMask, setDaysMask] = useState(existing?.daysMask ?? ALL_DAYS);
+  const [hasWindow, setHasWindow] = useState(
+    existing?.startMinute != null && existing?.endMinute != null,
+  );
+  const [startTime, setStartTime] = useState("08:00");
+  const [endTime, setEndTime] = useState("12:00");
   const [hydrated, setHydrated] = useState(creating);
 
   // Le magasin se remplit après le premier rendu : on recopie la routine dans
@@ -39,6 +44,10 @@ export function RoutineEditor({ id }: { id: string }) {
     setEmoji(existing.emoji ?? "");
     setColor(existing.color ?? COLORS[0]);
     setDaysMask(existing.daysMask);
+    if (existing.startMinute != null) setStartTime(minutesToTimeInput(existing.startMinute));
+    if (existing.endMinute != null) {
+      setEndTime(minutesToTimeInput(existing.endMinute === 1440 ? 0 : existing.endMinute));
+    }
     setHydrated(true);
   }
 
@@ -62,6 +71,12 @@ export function RoutineEditor({ id }: { id: string }) {
       color,
       daysMask,
       position: existing?.position ?? data.routines.length,
+      // « 00 h 00 » en fin de créneau ne peut désigner que minuit à la clôture
+      // de la journée : un créneau de durée nulle ou négative n'a pas de sens.
+      startMinute: hasWindow ? timeInputToMinutes(startTime) : null,
+      endMinute: hasWindow
+        ? (endTime === "00:00" ? 1440 : timeInputToMinutes(endTime))
+        : null,
       deletedAt: null,
     });
     router.push("/routines");
@@ -101,6 +116,38 @@ export function RoutineEditor({ id }: { id: string }) {
         >
           <DaysPicker value={daysMask} onChange={setDaysMask} />
           <DaysShortcuts onChange={setDaysMask} />
+        </Field>
+
+        <Field
+          label="Créneau"
+          hint="Situe ce bloc dans la journée : c’est ce qui permet au repère « maintenant » de s’y arrêter, même sans tâche à heure fixe dedans."
+        >
+          <label className="text-muted-foreground mb-3 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={hasWindow}
+              onChange={(event) => setHasWindow(event.target.checked)}
+              className="accent-[var(--primary)]"
+            />
+            Ce bloc correspond à un moment précis de la journée
+          </label>
+          {hasWindow ? (
+            <div className="flex items-center gap-2">
+              <TextInput
+                type="time"
+                value={startTime}
+                onChange={(event) => setStartTime(event.target.value)}
+              />
+              <span className="text-muted-foreground text-sm" aria-hidden>
+                à
+              </span>
+              <TextInput
+                type="time"
+                value={endTime}
+                onChange={(event) => setEndTime(event.target.value)}
+              />
+            </div>
+          ) : null}
         </Field>
 
         <Field label="Couleur">

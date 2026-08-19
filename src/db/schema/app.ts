@@ -36,6 +36,10 @@ const ownerColumn = {
  *
  * `position` porte l'ordre de la journée ; `daysMask` est un bitmask 0–127
  * (bit 0 = lundi) qui sert de valeur par défaut aux tâches de la routine.
+ *
+ * `startMinute` / `endMinute` (minutes depuis minuit, `NULL` = pas de créneau)
+ * bornent ce moment de la journée : c'est ce qui permet au repère « maintenant »
+ * de situer l'heure actuelle dans le bon bloc même sans tâche horodatée dedans.
  */
 export const routines = sqliteTable(
   "routine",
@@ -47,6 +51,8 @@ export const routines = sqliteTable(
     color: text("color"),
     daysMask: integer("days_mask").notNull().default(127),
     position: integer("position").notNull().default(0),
+    startMinute: integer("start_minute"),
+    endMinute: integer("end_minute"),
     ...syncColumns,
   },
   (t) => [index("routine_user_idx").on(t.userId)],

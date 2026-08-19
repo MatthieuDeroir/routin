@@ -13,12 +13,12 @@ import { ALL_DAYS } from "@/lib/domain";
  * réordonnent et se suppriment.
  */
 const DEFAULT_ROUTINES = [
-  { name: "Réveil", emoji: "🌅", color: "#8a7a4e" },
-  { name: "Matin", emoji: "☕", color: "#46605a" },
-  { name: "Midi", emoji: "🍽️", color: "#3f6b8f" },
-  { name: "Après-midi", emoji: "🌤️", color: "#7a5b8c" },
-  { name: "Soir", emoji: "🌙", color: "#a8564a" },
-  { name: "Nuit", emoji: "🌌", color: "#5f7a45" },
+  { name: "Réveil", emoji: "🌅", color: "#8a7a4e", startMinute: 6 * 60, endMinute: 8 * 60 },
+  { name: "Matin", emoji: "☕", color: "#46605a", startMinute: 8 * 60, endMinute: 12 * 60 },
+  { name: "Midi", emoji: "🍽️", color: "#3f6b8f", startMinute: 12 * 60, endMinute: 14 * 60 },
+  { name: "Après-midi", emoji: "🌤️", color: "#7a5b8c", startMinute: 14 * 60, endMinute: 19 * 60 },
+  { name: "Soir", emoji: "🌙", color: "#a8564a", startMinute: 19 * 60, endMinute: 24 * 60 },
+  { name: "Nuit", emoji: "🌌", color: "#5f7a45", startMinute: 0, endMinute: 6 * 60 },
 ];
 
 export async function ensureUserDefaults(userId: string): Promise<void> {

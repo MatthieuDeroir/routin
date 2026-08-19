@@ -231,16 +231,49 @@ export interface NowMarker {
   index: number;
 }
 
+interface TimeWindow {
+  start: number;
+  end: number;
+}
+
+function windowOf(routine: Pick<Routine, "startMinute" | "endMinute"> | null): TimeWindow | null {
+  if (!routine) return null;
+  const { startMinute, endMinute } = routine;
+  if (startMinute === null || startMinute === undefined) return null;
+  if (endMinute === null || endMinute === undefined) return null;
+  if (startMinute === endMinute) return null;
+  return { start: startMinute, end: endMinute };
+}
+
+/** `end <= start` signifie un créneau qui traverse minuit (ex. 22 h–2 h). */
+function withinWindow(minute: number, { start, end }: TimeWindow): boolean {
+  return start < end ? minute >= start && minute < end : minute >= start || minute < end;
+}
+
+/** Position juste avant la prochaine tâche horodatée de la section, sinon sa fin. */
+function indexBeforeNextTimed(entries: ScheduleEntry[], nowMinute: number): number {
+  let last = 0;
+  for (const [index, entry] of entries.entries()) {
+    const at = entry.task.atMinute;
+    if (at === null || at === undefined) continue;
+    if (at > nowMinute) return index;
+    last = index + 1;
+  }
+  return last;
+}
+
 /**
  * Où poser le repère « maintenant » dans la journée affichée.
  *
- * Il n'appartient pas à un bloc en particulier : il se glisse juste avant la
- * prochaine tâche horodatée, où qu'elle se trouve, et se retrouve donc en bas
- * de l'écran à mesure que la journée avance. Si toutes les heures sont passées,
- * il ferme la dernière section horodatée.
+ * Chaque routine porte son propre créneau (`startMinute`/`endMinute`) : le
+ * repère se pose dans le bloc dont le créneau contient l'heure actuelle, à
+ * l'endroit où il croiserait une tâche horodatée s'il y en avait une. Sans
+ * créneau configuré sur aucune routine affichée (compte pas encore migré,
+ * routine personnalisée sans horaire), on retombe sur l'ancien repère : juste
+ * avant la prochaine tâche horodatée, où qu'elle se trouve.
  *
- * Les directives et « dans la journée » sont ignorées : elles n'ont pas d'heure,
- * les traverser d'une ligne de temps n'aurait aucun sens.
+ * Les directives et « dans la journée » sont ignorées : elles n'ont pas
+ * d'heure, les traverser d'une ligne de temps n'aurait aucun sens.
  */
 export function locateNowMarker(
   schedule: DaySchedule,
@@ -248,11 +281,37 @@ export function locateNowMarker(
 ): NowMarker | null {
   if (nowMinute === null) return null;
 
+  const routineSections = schedule.sections.filter((section) => section.kind === "routine");
+  if (routineSections.length === 0) return null;
+
+  const windowed = routineSections
+    .map((section) => ({ section, window: windowOf(section.routine) }))
+    .filter(
+      (entry): entry is { section: ScheduleSection; window: TimeWindow } =>
+        entry.window !== null,
+    );
+
+  if (windowed.length > 0) {
+    const inside = windowed.find(({ window }) => withinWindow(nowMinute, window));
+    if (inside) {
+      return {
+        sectionKey: inside.section.key,
+        index: indexBeforeNextTimed(inside.section.entries, nowMinute),
+      };
+    }
+
+    // Le bloc actif à cette heure n'a aucune tâche aujourd'hui, donc aucune
+    // section : on s'accroche au dernier créneau déjà entamé, sinon on
+    // annonce le prochain.
+    const sorted = [...windowed].sort((a, b) => a.window.start - b.window.start);
+    const upcoming = sorted.find(({ window }) => window.start > nowMinute);
+    if (upcoming) return { sectionKey: upcoming.section.key, index: 0 };
+    const last = sorted.at(-1);
+    if (last) return { sectionKey: last.section.key, index: last.section.entries.length };
+  }
+
   let last: NowMarker | null = null;
-
-  for (const section of schedule.sections) {
-    if (section.kind !== "routine") continue;
-
+  for (const section of routineSections) {
     for (const [index, entry] of section.entries.entries()) {
       const at = entry.task.atMinute;
       if (at === null || at === undefined) continue;

@@ -10,6 +10,12 @@ export type WeekdayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 /**
  * Une routine est à la fois le groupe et le moment de la journée : « Matin »
  * nomme le bloc et sa place. `position` porte l'ordre de la journée.
+ *
+ * `startMinute` / `endMinute` bornent ce moment dans la journée (minutes
+ * depuis minuit) : c'est ce qui permet au repère « maintenant » de savoir dans
+ * quel bloc on se trouve même quand aucune tâche n'y porte d'heure précise.
+ * `null` sur l'un des deux signifie « pas de créneau défini » — une routine
+ * personnalisée peut très bien n'en avoir aucun.
  */
 export interface Routine {
   id: string;
@@ -18,6 +24,8 @@ export interface Routine {
   color?: string | null;
   daysMask: DaysMask;
   position: number;
+  startMinute?: number | null;
+  endMinute?: number | null;
 }
 
 /**

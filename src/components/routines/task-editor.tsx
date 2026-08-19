@@ -34,6 +34,7 @@ export function TaskEditor({ id, today }: { id: string; today: DayString }) {
   const [daysMask, setDaysMask] = useState(ALL_DAYS);
   const [timed, setTimed] = useState(false);
   const [time, setTime] = useState("07:00");
+  const [punctual, setPunctual] = useState(false);
   const [hydrated, setHydrated] = useState(creating);
 
   // Recopie unique de la tâche dans le formulaire dès que le magasin est prêt :
@@ -47,6 +48,9 @@ export function TaskEditor({ id, today }: { id: string; today: DayString }) {
     setDaysMask(existing.daysMask ?? ALL_DAYS);
     setTimed(existing.atMinute !== null);
     if (existing.atMinute !== null) setTime(minutesToTimeInput(existing.atMinute));
+    setPunctual(
+      existing.activeFrom !== null && existing.activeFrom === existing.activeUntil,
+    );
     setHydrated(true);
   }
 
@@ -62,6 +66,12 @@ export function TaskEditor({ id, today }: { id: string; today: DayString }) {
   const isDirective = kind === "directive";
   const routine = data.routines.find((item) => item.id === routineId) ?? null;
   const followsRoutine = Boolean(routine) && !overrideDays && !isDirective;
+  const from = existing?.activeFrom ?? today;
+  const fromLabel = new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date(`${from}T12:00:00Z`));
 
   function save() {
     const trimmed = name.trim();
@@ -75,14 +85,17 @@ export function TaskEditor({ id, today }: { id: string; today: DayString }) {
       atMinute: isDirective || !timed ? null : timeInputToMinutes(time),
       name: trimmed,
       notes: notes.trim() || null,
-      // Sans routine, la tâche doit porter ses propres jours : il n'y a rien
-      // dont hériter.
-      daysMask: followsRoutine ? null : daysMask,
+      // Ponctuelle : bornée au seul jour de création, donc ses jours actifs
+      // n'ont plus de sens — tous suffisent, seule la borne compte.
+      // Sans routine (et sans être ponctuelle), la tâche doit porter ses
+      // propres jours : il n'y a rien dont hériter.
+      daysMask: punctual ? ALL_DAYS : followsRoutine ? null : daysMask,
       position: existing?.position ?? data.tasks.length,
       // Une tâche créée aujourd'hui n'a pas existé hier : sans cette borne,
-      // elle apparaîtrait rétroactivement dans tout l'historique.
-      activeFrom: existing?.activeFrom ?? today,
-      activeUntil: existing?.activeUntil ?? null,
+      // elle apparaîtrait rétroactivement dans tout l'historique. Ponctuelle,
+      // elle se referme le jour même plutôt que de rester ouverte.
+      activeFrom: from,
+      activeUntil: punctual ? from : (existing?.activeUntil ?? null),
       deletedAt: null,
     });
     router.push("/routines");
@@ -183,26 +196,47 @@ export function TaskEditor({ id, today }: { id: string; today: DayString }) {
           </>
         ) : null}
 
-        <Field label="Jours">
-          {routine && !isDirective ? (
-            <label className="text-muted-foreground mb-3 flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={!overrideDays}
-                onChange={(event) => setOverrideDays(!event.target.checked)}
-                className="accent-[var(--primary)]"
-              />
-              Suivre les jours de « {routine.name} »
-            </label>
-          ) : null}
-
-          <DaysPicker
-            value={followsRoutine && routine ? routine.daysMask : daysMask}
-            onChange={setDaysMask}
-            disabled={followsRoutine}
-          />
-          <DaysShortcuts onChange={setDaysMask} disabled={followsRoutine} />
+        <Field
+          label="Récurrence"
+          hint={
+            punctual
+              ? `N'existera que le ${fromLabel}, sans repasser les jours suivants.`
+              : "Ponctuelle : un évènement isolé, pas une habitude à répéter."
+          }
+        >
+          <label className="text-muted-foreground flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={punctual}
+              onChange={(event) => setPunctual(event.target.checked)}
+              className="accent-[var(--primary)]"
+            />
+            Ponctuelle — seulement le {fromLabel}
+          </label>
         </Field>
+
+        {!punctual ? (
+          <Field label="Jours">
+            {routine && !isDirective ? (
+              <label className="text-muted-foreground mb-3 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={!overrideDays}
+                  onChange={(event) => setOverrideDays(!event.target.checked)}
+                  className="accent-[var(--primary)]"
+                />
+                Suivre les jours de « {routine.name} »
+              </label>
+            ) : null}
+
+            <DaysPicker
+              value={followsRoutine && routine ? routine.daysMask : daysMask}
+              onChange={setDaysMask}
+              disabled={followsRoutine}
+            />
+            <DaysShortcuts onChange={setDaysMask} disabled={followsRoutine} />
+          </Field>
+        ) : null}
 
         <Field label="Notes">
           <TextArea
