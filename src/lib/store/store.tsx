@@ -25,6 +25,7 @@ export function useStore() {
   return {
     ...state,
     reorderRoutines: store.reorderRoutines.bind(store),
+    reorderTasks: store.reorderTasks.bind(store),
     upsertRoutine: store.upsertRoutine.bind(store),
     removeRoutine: store.removeRoutine.bind(store),
     upsertTask: store.upsertTask.bind(store),

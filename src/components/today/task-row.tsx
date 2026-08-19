@@ -1,9 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type CSSProperties, type HTMLAttributes } from "react";
 import { formatMinute, type ScheduleEntry } from "@/lib/domain";
 import { cn } from "@/lib/utils";
+
+/**
+ * Prise en main du glisser-déposer, posée par le conteneur triable. Typée en
+ * termes génériques plutôt qu'avec les types de dnd-kit : cette ligne n'a pas
+ * à savoir quelle librairie l'anime.
+ */
+export interface DragHandle {
+  setNodeRef: (node: HTMLElement | null) => void;
+  style: CSSProperties;
+  attributes: HTMLAttributes<HTMLButtonElement>;
+  listeners: Record<string, (event: never) => void> | undefined;
+  dragging: boolean;
+}
 
 interface TaskRowProps {
   entry: ScheduleEntry;
@@ -18,6 +31,8 @@ interface TaskRowProps {
    * reste disponible dans ce cas.
    */
   canRemove?: boolean;
+  /** Présent seulement pour les tâches sans heure : elles seules se réordonnent. */
+  drag?: DragHandle;
 }
 
 export function TaskRow({
@@ -26,6 +41,7 @@ export function TaskRow({
   onRemove,
   disabled,
   canRemove = true,
+  drag,
 }: TaskRowProps) {
   const { task, routine, done } = entry;
   const [confirming, setConfirming] = useState(false);
@@ -33,13 +49,33 @@ export function TaskRow({
 
   return (
     <li
+      ref={drag?.setNodeRef}
+      style={{ backdropFilter: "var(--rt-backdrop)", ...drag?.style }}
       className={cn(
         "group flex items-center gap-3 rounded-[var(--radius)] px-3 py-[var(--rt-row-py)]",
         "border border-[var(--rt-surface-border)] bg-[var(--rt-surface)]",
         "shadow-[var(--rt-shadow)] transition-colors",
+        drag?.dragging && "relative z-10",
       )}
-      style={{ backdropFilter: "var(--rt-backdrop)" }}
     >
+      {drag ? (
+        <button
+          type="button"
+          aria-label={`Réordonner « ${task.name} »`}
+          className="text-muted-foreground/50 hover:text-muted-foreground grid size-6 shrink-0 cursor-grab touch-none place-items-center active:cursor-grabbing"
+          {...drag.attributes}
+          {...drag.listeners}
+        >
+          <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden>
+            <circle cx="9" cy="6" r="1.3" fill="currentColor" />
+            <circle cx="15" cy="6" r="1.3" fill="currentColor" />
+            <circle cx="9" cy="12" r="1.3" fill="currentColor" />
+            <circle cx="15" cy="12" r="1.3" fill="currentColor" />
+            <circle cx="9" cy="18" r="1.3" fill="currentColor" />
+            <circle cx="15" cy="18" r="1.3" fill="currentColor" />
+          </svg>
+        </button>
+      ) : null}
       <button
         type="button"
         disabled={disabled}

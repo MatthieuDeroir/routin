@@ -1,6 +1,21 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Fragment, useState, type HTMLAttributes } from "react";
 import {
   ANYTIME_KEY,
   DIRECTIVES_KEY,
@@ -9,6 +24,7 @@ import {
   type DaySchedule,
   type NowMarker,
   type Routine,
+  type ScheduleEntry,
   type ScheduleSection,
   type TaskKind,
 } from "@/lib/domain";
@@ -38,6 +54,12 @@ interface DayPanelProps {
    * écoulés. Le geste rapide reste réservé à aujourd'hui et à l'avenir.
    */
   canRemove?: boolean;
+  /**
+   * Absent tant qu'on n'est pas sur aujourd'hui : `position` n'est pas daté,
+   * réordonner depuis un autre jour changerait l'ordre partout à la fois,
+   * y compris dans le passé déjà vécu.
+   */
+  onReorder?: (sectionKey: string, ids: string[]) => void;
 }
 
 function targetOf(section: ScheduleSection): AddTarget {
@@ -56,6 +78,7 @@ export function DayPanel({
   onAdd,
   disabled,
   canRemove = true,
+  onReorder,
 }: DayPanelProps) {
   if (empty) return null;
 
@@ -79,6 +102,7 @@ export function DayPanel({
             onAdd={(name) => onAdd(name, targetOf(section))}
             disabled={disabled}
             canRemove={canRemove}
+            onReorder={onReorder ? (ids) => onReorder(section.key, ids) : undefined}
           />
         ))}
       </div>
@@ -93,6 +117,10 @@ export function DayPanel({
   );
 }
 
+function isTimed(entry: ScheduleEntry): boolean {
+  return entry.task.atMinute !== null && entry.task.atMinute !== undefined;
+}
+
 function Section({
   section,
   nowMinute,
@@ -102,6 +130,7 @@ function Section({
   onAdd,
   disabled,
   canRemove,
+  onReorder,
 }: {
   section: ScheduleSection;
   nowMinute: number | null;
@@ -111,7 +140,14 @@ function Section({
   onAdd: (name: string) => void;
   disabled?: boolean;
   canRemove?: boolean;
+  onReorder?: (ids: string[]) => void;
 }) {
+  // Les tâches horodatées sont triées par l'heure, jamais à la main ; seules
+  // celles sans heure — toujours à la suite, par construction du tri de la
+  // section — se glissent-déposent entre elles.
+  const timedEntries = section.entries.filter(isTimed);
+  const untimedEntries = section.entries.filter((entry) => !isTimed(entry));
+
   return (
     <section>
       <header className="mb-2.5 flex items-baseline gap-2.5 px-1">
@@ -139,7 +175,7 @@ function Section({
       </header>
 
       <ul className="space-y-[var(--rt-list-gap)]">
-        {section.entries.map((entry, index) => (
+        {timedEntries.map((entry, index) => (
           <Fragment key={entry.task.id}>
             {marker?.index === index ? <NowMarker minute={nowMinute as number} /> : null}
             <TaskRow
@@ -151,9 +187,31 @@ function Section({
             />
           </Fragment>
         ))}
-        {marker && marker.index >= section.entries.length ? (
+        {marker?.index === timedEntries.length ? (
           <NowMarker minute={nowMinute as number} />
         ) : null}
+
+        {onReorder && untimedEntries.length > 1 ? (
+          <SortableEntries
+            entries={untimedEntries}
+            onToggle={onToggle}
+            onRemove={onRemove}
+            disabled={disabled}
+            canRemove={canRemove}
+            onReorder={onReorder}
+          />
+        ) : (
+          untimedEntries.map((entry) => (
+            <TaskRow
+              key={entry.task.id}
+              entry={entry}
+              onToggle={onToggle}
+              onRemove={onRemove}
+              disabled={disabled}
+              canRemove={canRemove}
+            />
+          ))
+        )}
       </ul>
 
       <InlineAdd
@@ -165,6 +223,102 @@ function Section({
         onAdd={onAdd}
       />
     </section>
+  );
+}
+
+/**
+ * Glisser-déposer des tâches sans heure d'un même bloc.
+ *
+ * `PointerSensor` couvre souris et tactile en un seul capteur ; une contrainte
+ * de distance évite qu'un simple appui pour cocher soit pris pour un début de
+ * glissement, la poignée dédiée s'en charge déjà mais la marge ne coûte rien.
+ */
+function SortableEntries({
+  entries,
+  onToggle,
+  onRemove,
+  disabled,
+  canRemove,
+  onReorder,
+}: {
+  entries: ScheduleEntry[];
+  onToggle: (taskId: string, done: boolean) => void;
+  onRemove: (taskId: string) => void;
+  disabled?: boolean;
+  canRemove?: boolean;
+  onReorder: (ids: string[]) => void;
+}) {
+  const ids = entries.map((entry) => entry.task.id);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const from = ids.indexOf(String(active.id));
+    const to = ids.indexOf(String(over.id));
+    if (from === -1 || to === -1) return;
+    onReorder(arrayMove(ids, from, to));
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        {entries.map((entry) => (
+          <SortableTaskRow
+            key={entry.task.id}
+            entry={entry}
+            onToggle={onToggle}
+            onRemove={onRemove}
+            disabled={disabled}
+            canRemove={canRemove}
+          />
+        ))}
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+function SortableTaskRow({
+  entry,
+  onToggle,
+  onRemove,
+  disabled,
+  canRemove,
+}: {
+  entry: ScheduleEntry;
+  onToggle: (taskId: string, done: boolean) => void;
+  onRemove: (taskId: string) => void;
+  disabled?: boolean;
+  canRemove?: boolean;
+}) {
+  const sortable = useSortable({ id: entry.task.id });
+
+  return (
+    <TaskRow
+      entry={entry}
+      onToggle={onToggle}
+      onRemove={onRemove}
+      disabled={disabled}
+      canRemove={canRemove}
+      drag={{
+        setNodeRef: sortable.setNodeRef,
+        style: {
+          transform: CSS.Transform.toString(sortable.transform),
+          transition: sortable.transition,
+        },
+        attributes: sortable.attributes as HTMLAttributes<HTMLButtonElement>,
+        listeners: sortable.listeners as
+          | Record<string, (event: never) => void>
+          | undefined,
+        dragging: sortable.isDragging,
+      }}
+    />
   );
 }
 

@@ -32,7 +32,7 @@ interface TodayViewProps {
 }
 
 export function TodayView({ theme, today, timeZone, menu }: TodayViewProps) {
-  const { data, ready, setCompletion, upsertTask, endTask } = useStore();
+  const { data, ready, setCompletion, upsertTask, endTask, reorderTasks } = useStore();
   const { routines, tasks, completions } = data;
 
   const [day, setDay] = useState<DayString>(today);
@@ -249,6 +249,7 @@ export function TodayView({ theme, today, timeZone, menu }: TodayViewProps) {
               nowMinute={current === today ? nowMinute : null}
               disabled={current > today}
               canRemove={current >= today}
+              onReorder={current === today ? (_, ids) => reorderTasks(ids) : undefined}
               onToggle={(taskId, done) => toggle(taskId, done, current)}
               onRemove={(taskId) => remove(taskId, current)}
               onAdd={(name, target) => add(name, target, current)}

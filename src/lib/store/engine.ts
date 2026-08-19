@@ -179,6 +179,26 @@ export class RoutinStore {
     this.write("routines", changed);
   }
 
+  /**
+   * Réordonne un sous-ensemble de tâches (celles d'un bloc, sans heure) :
+   * `position` ne sert qu'au tri au sein d'un même groupe, donc renuméroter
+   * ce seul sous-ensemble n'affecte jamais les tâches des autres blocs, même
+   * si les valeurs se recoupent avec les leurs.
+   */
+  reorderTasks(ids: string[]) {
+    const now = Date.now();
+    const rank = new Map(ids.map((id, index) => [id, index]));
+    const tasks = this.snapshot.tasks.map((task) => {
+      const position = rank.get(task.id);
+      return position === undefined || position === task.position
+        ? task
+        : { ...task, position, updatedAt: now };
+    });
+    const changed = tasks.filter((task, index) => task !== this.snapshot.tasks[index]);
+    this.snapshot = { ...this.snapshot, tasks };
+    this.write("tasks", changed);
+  }
+
   removeRoutine(id: string) {
     const now = Date.now();
     const routines = this.snapshot.routines.map((routine) =>
