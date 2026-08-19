@@ -117,14 +117,23 @@ export class RoutinStore {
     }
   }
 
+  /**
+   * L'écriture IndexedDB doit être confirmée avant l'envoi : `flush` lit la
+   * file avec sa propre transaction, et rien ne garantit qu'elle s'exécute
+   * après celle qui vient d'y déposer la mutation. Sans cette attente, un
+   * envoi déclenché juste après une saisie peut partir sans elle.
+   */
   private write(kind: EntityKind, rows: { id: string }[]) {
-    for (const row of rows) {
-      void putRow(kind, row);
-      void enqueue(kind, row.id, row);
-    }
     this.publish();
-    void this.refreshPending();
-    void this.flush();
+    void this.persistThenSync(kind, rows);
+  }
+
+  private async persistThenSync(kind: EntityKind, rows: { id: string }[]) {
+    await Promise.all(
+      rows.flatMap((row) => [putRow(kind, row), enqueue(kind, row.id, row)]),
+    );
+    await this.refreshPending();
+    await this.flush();
   }
 
   /**

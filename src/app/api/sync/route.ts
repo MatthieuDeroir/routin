@@ -37,6 +37,10 @@ export async function POST(request: Request) {
   const { since, mutations } = parsed.data;
   const rejected: SyncResponse["rejected"] = [];
 
+  if (mutations.length > 0) {
+    console.log(`[routin] sync ${user.id} : ${mutations.length} mutation(s) reçue(s)`);
+  }
+
   // L'ordre compte : une tâche peut référencer une routine créée dans le même
   // envoi, une coche une tâche.
   const ordered = [...mutations].sort(
@@ -61,6 +65,9 @@ export async function POST(request: Request) {
           break;
       }
     } catch (error) {
+      // Journalisé côté serveur : un rejet est retiré de la file cliente sans
+      // repasser, donc la seule trace qui en reste vit ici.
+      console.error("[routin] mutation refusée", mutation.kind, mutation.payload.id, error);
       rejected.push({
         id: mutation.payload.id,
         kind: mutation.kind,
