@@ -32,6 +32,12 @@ interface DayPanelProps {
   onRemove: (taskId: string) => void;
   onAdd: (name: string, target: AddTarget) => void;
   disabled?: boolean;
+  /**
+   * Faux sur un jour déjà passé : retirer une tâche borne sa validité en
+   * cascade jusqu'à aujourd'hui, ce qui effacerait aussi des jours déjà
+   * écoulés. Le geste rapide reste réservé à aujourd'hui et à l'avenir.
+   */
+  canRemove?: boolean;
 }
 
 function targetOf(section: ScheduleSection): AddTarget {
@@ -49,6 +55,7 @@ export function DayPanel({
   onRemove,
   onAdd,
   disabled,
+  canRemove = true,
 }: DayPanelProps) {
   if (empty) return null;
 
@@ -71,6 +78,7 @@ export function DayPanel({
             onRemove={onRemove}
             onAdd={(name) => onAdd(name, targetOf(section))}
             disabled={disabled}
+            canRemove={canRemove}
           />
         ))}
       </div>
@@ -93,6 +101,7 @@ function Section({
   onRemove,
   onAdd,
   disabled,
+  canRemove,
 }: {
   section: ScheduleSection;
   nowMinute: number | null;
@@ -101,6 +110,7 @@ function Section({
   onRemove: (taskId: string) => void;
   onAdd: (name: string) => void;
   disabled?: boolean;
+  canRemove?: boolean;
 }) {
   return (
     <section>
@@ -137,6 +147,7 @@ function Section({
               onToggle={onToggle}
               onRemove={onRemove}
               disabled={disabled}
+              canRemove={canRemove}
             />
           </Fragment>
         ))}

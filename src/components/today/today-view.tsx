@@ -110,9 +110,17 @@ export function TodayView({ theme, today, timeZone, menu }: TodayViewProps) {
     [upsertTask, tasks.length],
   );
 
+  // Retirer borne la validité à la veille du jour affiché : sur un jour passé,
+  // ça effacerait aussi tous les jours déjà écoulés entre-temps, jusqu'à
+  // aujourd'hui. Le geste rapide ne vaut donc que depuis aujourd'hui ou plus
+  // tard ; sur le passé, seul l'éditeur complet peut agir, et il borne
+  // toujours à la veille du véritable aujourd'hui.
   const remove = useCallback(
-    (taskId: string, on: DayString) => endTask(taskId, addDays(on, -1)),
-    [endTask],
+    (taskId: string, on: DayString) => {
+      if (on < today) return;
+      endTask(taskId, addDays(on, -1));
+    },
+    [endTask, today],
   );
 
   const scroller = useRef<HTMLDivElement>(null);
@@ -240,6 +248,7 @@ export function TodayView({ theme, today, timeZone, menu }: TodayViewProps) {
               schedule={scheduleFor(current)}
               nowMinute={current === today ? nowMinute : null}
               disabled={current > today}
+              canRemove={current >= today}
               onToggle={(taskId, done) => toggle(taskId, done, current)}
               onRemove={(taskId) => remove(taskId, current)}
               onAdd={(name, target) => add(name, target, current)}

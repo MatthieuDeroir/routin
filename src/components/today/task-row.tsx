@@ -11,9 +11,22 @@ interface TaskRowProps {
   onRemove: (taskId: string) => void;
   /** Verrouille les coches sur un jour futur : on ne valide pas d'avance. */
   disabled?: boolean;
+  /**
+   * Faux sur un jour déjà passé : le retrait rapide borne la validité en
+   * cascade jusqu'à aujourd'hui, ce qui effacerait aussi des jours déjà
+   * écoulés. Seul l'éditeur complet (toujours ancré sur le vrai aujourd'hui)
+   * reste disponible dans ce cas.
+   */
+  canRemove?: boolean;
 }
 
-export function TaskRow({ entry, onToggle, onRemove, disabled }: TaskRowProps) {
+export function TaskRow({
+  entry,
+  onToggle,
+  onRemove,
+  disabled,
+  canRemove = true,
+}: TaskRowProps) {
   const { task, routine, done } = entry;
   const [confirming, setConfirming] = useState(false);
   const timed = task.atMinute !== null && task.atMinute !== undefined;
@@ -112,22 +125,24 @@ export function TaskRow({ entry, onToggle, onRemove, disabled }: TaskRowProps) {
                 />
               </svg>
             </Link>
-            <button
-              type="button"
-              onClick={() => setConfirming(true)}
-              aria-label={`Retirer « ${task.name} »`}
-              className="text-muted-foreground hover:text-destructive grid size-8 place-items-center rounded-full"
-            >
-              <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden>
-                <path
-                  d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
+            {canRemove ? (
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                aria-label={`Retirer « ${task.name} »`}
+                className="text-muted-foreground hover:text-destructive grid size-8 place-items-center rounded-full"
+              >
+                <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden>
+                  <path
+                    d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            ) : null}
           </>
         )}
       </div>
